@@ -1,0 +1,9 @@
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, spacing } from '../../theme';
+import type { SelectedImage } from '../../types/domain';
+
+export function CameraReview({ image, onRetake, onUse }: { image?: SelectedImage; onRetake: () => void; onUse: () => void }) {
+  return <Modal visible={!!image} animationType="slide" onRequestClose={onRetake}><View style={styles.screen}><View style={styles.header}><Text style={styles.title}>Ảnh vừa chụp</Text></View>{image && <Image source={{ uri: image.uri }} resizeMode="contain" style={styles.image} />}<View style={styles.actions}><Pressable accessibilityRole="button" onPress={onRetake} style={styles.secondary}><Ionicons name="camera-reverse-outline" size={21} color={colors.primary} /><Text style={styles.secondaryText}>Chụp lại</Text></Pressable><Pressable testID="use-captured-image" accessibilityRole="button" onPress={onUse} style={styles.primary}><Ionicons name="checkmark" size={22} color="#fff" /><Text style={styles.primaryText}>Dùng ảnh này</Text></Pressable></View></View></Modal>;
+}
+const styles = StyleSheet.create({ screen: { flex: 1, backgroundColor: '#0C1510' }, header: { minHeight: 82, paddingTop: 24, justifyContent: 'center', alignItems: 'center' }, title: { color: '#fff', fontSize: 20, fontWeight: '800' }, image: { flex: 1, width: '100%' }, actions: { flexDirection: 'row', gap: 12, padding: spacing.md, paddingBottom: 28 }, secondary: { flex: 1, minHeight: 52, borderRadius: radius.md, backgroundColor: colors.surface, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' }, primary: { flex: 1, minHeight: 52, borderRadius: radius.md, backgroundColor: colors.primary, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' }, secondaryText: { color: colors.primary, fontWeight: '800' }, primaryText: { color: '#fff', fontWeight: '800' } });

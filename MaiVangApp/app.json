@@ -1,33 +1,27 @@
 {
   "expo": {
-    "name": "MaiVangApp",
-    "slug": "MaiVangApp",
+    "name": "MaiCare",
+    "slug": "maicare",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "ios": {
-      "supportsTablet": true
-    },
+    "ios": { "supportsTablet": true },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#E8F4EE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "web": { "favicon": "./assets/favicon.png", "bundler": "metro" },
     "plugins": [
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Ứng dụng cần quyền truy cập thư viện ảnh để bạn có thể tải ảnh cây mai lên.",
-          "cameraPermission": "Ứng dụng cần quyền truy cập máy ảnh để bạn có thể chụp ảnh cây mai trực tiếp."
-        }
-      ]
+      ["expo-image-picker", {
+        "photosPermission": "Cho phép MaiCare truy cập thư viện để chọn ảnh lá mai.",
+        "cameraPermission": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai."
+      }],
+      "expo-secure-store"
     ]
   }
 }
