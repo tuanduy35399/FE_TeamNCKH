@@ -6,22 +6,39 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "ios": { "supportsTablet": true },
+    "ios": {
+      "supportsTablet": true
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E8F4EE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.fe_team_nckh.app"
     },
-    "web": { "favicon": "./assets/favicon.png", "bundler": "metro" },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
     "plugins": [
-      ["expo-image-picker", {
-        "photosPermission": "Cho phép MaiCare truy cập thư viện để chọn ảnh lá mai.",
-        "cameraPermission": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai."
-      }],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép MaiCare truy cập thư viện để chọn ảnh lá mai.",
+          "cameraPermission": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai."
+        }
+      ],
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "51153662-4c53-4b60-8efb-77f3fd3fb489"
+      }
+    }
   }
 }
