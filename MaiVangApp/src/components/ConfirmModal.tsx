@@ -6,7 +6,7 @@ export function ConfirmModal({ visible, busy, onCancel, onConfirm }: Props) {
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
     <View style={styles.overlay}><View accessibilityRole="alert" style={styles.card}>
       <Text style={styles.title}>Xóa tài khoản?</Text>
-      <Text style={styles.message}>Tài khoản hiện tại sẽ bị xóa trên máy chủ. Hành động này không thể hoàn tác.</Text>
+      <Text style={styles.message}>Tài khoản và dữ liệu liên quan sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.</Text>
       <View style={styles.actions}>
         <View style={styles.action}><AppButton title="Hủy" variant="secondary" onPress={onCancel} disabled={busy} /></View>
         <View style={styles.action}><AppButton title="Xóa tài khoản" variant="danger" onPress={onConfirm} loading={busy} testID="confirm-delete" /></View>

@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
+    "@expo-google-fonts/roboto": "^0.2.3",
     "@expo/metro-runtime": "~57.0.15",
     "@expo/vector-icons": "^15.0.2",
     "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
     "expo": "^57.0.0",
+    "expo-camera": "~57.0.4",
+    "expo-file-system": "~57.0.6",
+    "expo-font": "~57.0.3",
     "expo-image-picker": "~57.0.16",
     "expo-secure-store": "~57.0.3",
     "expo-status-bar": "~57.0.1",
@@ -21,12 +25,14 @@
   },
   "scripts": {
     "start": "expo start",
+    "start:mobile": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-web.ps1",
+    "web": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-deployed-web.ps1",
+    "web:expo": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-web.ps1",
     "dev:full": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
     "check": "tsc --noEmit",
-    "test": "tsx --test src/api/*.test.ts",
+    "test": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-tests.ps1",
     "doctor": "npx expo-doctor",
     "export:web": "expo export --platform web",
     "test:e2e": "playwright test"
@@ -34,6 +40,7 @@
   "private": true,
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@types/node": "^24.3.0",
     "@types/react": "~19.2.4",
     "tsx": "^4.23.13",
     "typescript": "~6.0.3"

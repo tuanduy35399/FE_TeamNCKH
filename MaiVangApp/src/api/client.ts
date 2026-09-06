@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_TIMEOUT_MS } from './config';
+import { AUTH_API_BASE_URL, AUTH_TIMEOUT_MS, CHAT_API_BASE_URL } from './config';
 import { ApiError, apiMessage, fieldErrorsFromPayload } from './errors';
 import type { Session } from '../types/domain';
 import { AUTH_ENDPOINTS } from './endpoints';
@@ -10,25 +10,48 @@ async function parseResponse(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
   try { return JSON.parse(text); } catch {
-    if (response.ok) throw new ApiError('Máy chủ trả về dữ liệu không hợp lệ.', response.status, undefined, 'malformed');
+    if (response.ok) throw new ApiError('MaiCare nhận được dữ liệu không hợp lệ. Vui lòng thử lại.', response.status, undefined, 'malformed');
     return { detail: text.slice(0, 200) };
   }
+}
+function logValidation(status: number, path: string, payload: unknown) {
+  if (process.env.NODE_ENV === 'production' || status !== 422 || !payload || typeof payload !== 'object') return;
+  const detail = (payload as { detail?: unknown }).detail;
+  if (!Array.isArray(detail)) return;
+  console.warn('[MaiCare API validation]', {
+    status,
+    endpoint: path,
+    detail: detail.map(item => {
+      const value = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+      return { loc: value.loc, msg: value.msg, type: value.type };
+    }),
+  });
 }
 async function refreshAccessToken(): Promise<string> {
   const session = hooks?.getSession();
   if (!session?.refreshToken) throw new ApiError('Phiên đăng nhập đã hết hạn.', 401);
-  const response = await fetch(`${API_BASE_URL}${AUTH_ENDPOINTS.refresh}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh: session.refreshToken }),
-  });
-  const payload = await parseResponse(response) as { access?: unknown; refresh?: unknown } | null;
-  if (!response.ok || typeof payload?.access !== 'string') throw new ApiError('Phiên đăng nhập đã hết hạn.', 401);
-  const next = { accessToken: payload.access, refreshToken: typeof payload.refresh === 'string' ? payload.refresh : session.refreshToken };
-  await hooks?.updateSession(next);
-  return next.accessToken;
-}
-export async function apiRequest<T>(path: string, options: RequestInit & { auth?: boolean; timeoutMs?: number; retryAuth?: boolean } = {}): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? API_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${AUTH_API_BASE_URL}${AUTH_ENDPOINTS.refresh}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh: session.refreshToken }), signal: controller.signal,
+    });
+    const payload = await parseResponse(response) as { access?: unknown; refresh?: unknown } | null;
+    if (!response.ok || typeof payload?.access !== 'string') throw new ApiError('Phiên đăng nhập đã hết hạn.', 401);
+    const next = { accessToken: payload.access, refreshToken: typeof payload.refresh === 'string' ? payload.refresh : session.refreshToken };
+    await hooks?.updateSession(next);
+    return next.accessToken;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Yêu cầu đang mất nhiều thời gian hơn dự kiến. Vui lòng thử lại.', undefined, undefined, 'timeout');
+    throw new ApiError('Không thể kết nối. Kiểm tra mạng rồi thử lại.', undefined, undefined, 'network');
+  } finally { clearTimeout(timeout); }
+}
+type ApiRequestOptions = RequestInit & { auth?: boolean; timeoutMs?: number; retryAuth?: boolean; service?: 'auth' | 'chat' };
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? AUTH_TIMEOUT_MS);
+  const baseUrl = options.service === 'chat' ? CHAT_API_BASE_URL : AUTH_API_BASE_URL;
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   if (options.auth) {
@@ -36,27 +59,28 @@ export async function apiRequest<T>(path: string, options: RequestInit & { auth?
     if (access) headers.set('Authorization', `Bearer ${access}`);
   }
   try {
-    let response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, signal: controller.signal });
+    const { auth: _auth, retryAuth: _retryAuth, timeoutMs: _timeoutMs, service: _service, ...fetchOptions } = options;
+    let response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
     if (response.status === 401 && options.auth && options.retryAuth !== false && hooks) {
       try {
         refreshPromise ||= refreshAccessToken().finally(() => { refreshPromise = null; });
         headers.set('Authorization', `Bearer ${await refreshPromise}`);
-        response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, signal: controller.signal });
-      } catch {
+        response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+      } catch (error) {
+        if (error instanceof ApiError && (error.kind === 'network' || error.kind === 'timeout')) throw error;
         await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
       }
     }
     const payload = await parseResponse(response);
-    if (!response.ok) throw new ApiError(apiMessage(response.status, payload), response.status, fieldErrorsFromPayload(payload));
+    if (!response.ok) {
+      logValidation(response.status, path, payload);
+      throw new ApiError(apiMessage(response.status, payload), response.status, fieldErrorsFromPayload(payload));
+    }
     return payload as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Kết nối quá thời gian. Vui lòng thử lại.', undefined, undefined, 'timeout');
-    const isWeb = typeof window !== 'undefined';
-    const message = isWeb
-      ? 'Trình duyệt không thể kết nối API. Hãy bảo đảm máy chủ đang chạy và cho phép đúng nguồn web.'
-      : 'Không thể kết nối máy chủ. Hãy kiểm tra địa chỉ API và kết nối mạng.';
-    throw new ApiError(message, undefined, undefined, isWeb ? 'browser' : 'network');
+    if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Yêu cầu đang mất nhiều thời gian hơn dự kiến. Vui lòng thử lại.', undefined, undefined, 'timeout');
+    throw new ApiError('Không thể kết nối. Kiểm tra mạng rồi thử lại.', undefined, undefined, 'network');
   } finally { clearTimeout(timeout); }
 }

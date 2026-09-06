@@ -7,7 +7,7 @@ const messages: Record<number, string> = {
   403: 'Bạn không có quyền thực hiện thao tác này.', 404: 'Không tìm thấy nội dung được yêu cầu.',
   409: 'Tên đăng nhập hoặc email đã được sử dụng.',
   413: 'Hình ảnh vượt quá dung lượng máy chủ cho phép.', 415: 'Định dạng hình ảnh không được máy chủ hỗ trợ.',
-  422: 'Dữ liệu chưa đáp ứng yêu cầu của máy chủ.', 429: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.',
+  422: 'Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.', 429: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.',
 };
 export function fieldErrorsFromPayload(payload: unknown): FieldErrors | undefined {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return undefined;
@@ -19,7 +19,7 @@ export function fieldErrorsFromPayload(payload: unknown): FieldErrors | undefine
   return Object.keys(output).length ? output : undefined;
 }
 export function apiMessage(status: number, payload: unknown): string {
-  if (status >= 500) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';
+  if (status >= 500) return 'MaiCare chưa thể xử lý yêu cầu lúc này. Vui lòng thử lại sau.';
   if (messages[status]) return messages[status]!;
   if (payload && typeof payload === 'object' && 'detail' in payload) {
     const detail = (payload as { detail?: unknown }).detail;

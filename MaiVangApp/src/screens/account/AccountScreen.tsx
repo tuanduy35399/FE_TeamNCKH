@@ -29,7 +29,6 @@ export function AccountScreen() {
     <View style={styles.guide}><View style={styles.guideIcon}><Ionicons name="compass-outline" size={24} color={colors.primary} /></View><View style={styles.guideCopy}><Text style={styles.guideTitle}>Hướng dẫn sử dụng</Text><Text style={styles.guideText}>Xem lại các bước chính của MaiCare.</Text></View><Pressable testID="replay-tutorial" accessibilityRole="button" onPress={replayGuide} style={styles.guideButton}><Text style={styles.guideButtonText}>Xem lại hướng dẫn</Text></Pressable></View>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     <View style={styles.actions}><AppButton title="Đăng xuất" variant="secondary" onPress={() => void signOut()} testID="logout-button" /><AppButton title="Xóa tài khoản" variant="danger" onPress={() => setConfirming(true)} testID="delete-account-button" /></View>
-    <Text style={styles.security}>Thông tin bảo mật và dữ liệu nhạy cảm không được hiển thị tại đây.</Text>
     <ConfirmModal visible={confirming} busy={busy} onCancel={() => !busy && setConfirming(false)} onConfirm={remove} />
   </Screen>;
 }
@@ -41,6 +40,6 @@ const styles = StyleSheet.create({
   name: { color: colors.text, fontSize: 23, fontWeight: '800' }, username: { color: colors.muted, marginTop: 3 }, role: { marginTop: spacing.sm, color: colors.primaryDark, backgroundColor: colors.accentSoft, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5, fontWeight: '700' },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md }, row: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   rowText: { flex: 1, gap: 3 }, label: { color: colors.muted, fontSize: 12 }, value: { color: colors.text, fontSize: 16 }, actions: { marginTop: spacing.lg, gap: spacing.md },
-  error: { color: colors.danger, backgroundColor: colors.dangerSoft, padding: 12, borderRadius: radius.sm, marginTop: spacing.md }, security: { color: colors.muted, textAlign: 'center', fontSize: 12, lineHeight: 18, marginTop: spacing.lg },
+  error: { color: colors.danger, backgroundColor: colors.dangerSoft, padding: 12, borderRadius: radius.sm, marginTop: spacing.md },
   guide: { marginTop: spacing.md, padding: spacing.md, gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border }, guideIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }, guideCopy: { gap: 3 }, guideTitle: { color: colors.text, fontSize: 16, fontWeight: '800' }, guideText: { color: colors.muted }, guideButton: { minHeight: 44, borderRadius: radius.md, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' }, guideButtonText: { color: colors.primary, fontWeight: '800' },
 });

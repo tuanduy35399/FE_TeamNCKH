@@ -13,7 +13,7 @@ import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { DiagnosisScreen } from '../screens/diagnosis/DiagnosisScreen';
 import { HistoryDetailScreen } from '../screens/history/HistoryDetailScreen';
 import { HistoryScreen } from '../screens/history/HistoryScreen';
-import { colors } from '../theme';
+import { colors, fonts } from '../theme';
 import type { AuthStackParamList, MainStackParamList, TabParamList } from './types';
 import { TutorialProvider, useTutorial } from '../tutorial/TutorialProvider';
 
@@ -34,7 +34,7 @@ function AppTabs() {
   return <Tabs.Navigator screenOptions={({ route }) => ({
     headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted,
     tabBarStyle: { height: 66, paddingTop: 7, paddingBottom: 8, borderTopColor: colors.border },
-    tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+    tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.medium },
     tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <Ionicons name={icons[route.name]} color={color} size={size} />,
     tabBarButton: props => <TutorialTabButton name={route.name === 'History' ? 'history' : route.name === 'Account' ? 'account' : undefined} {...props} />,
   })}>

@@ -7,7 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai.",
+        "NSPhotoLibraryUsageDescription": "Cho phép MaiCare truy cập thư viện để chọn ảnh lá mai."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +20,12 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ],
-      "package": "com.fe_team_nckh.app"
+      "package": "com.fe_team_nckh.app",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -30,10 +36,19 @@
         "expo-image-picker",
         {
           "photosPermission": "Cho phép MaiCare truy cập thư viện để chọn ảnh lá mai.",
-          "cameraPermission": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai."
+          "cameraPermission": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai.",
+          "microphonePermission": false
         }
       ],
-      "expo-secure-store"
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-secure-store",
+      "expo-font"
     ],
     "extra": {
       "eas": {

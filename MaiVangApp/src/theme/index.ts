@@ -1,4 +1,20 @@
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
+export const fonts = { regular: 'Roboto_400Regular', medium: 'Roboto_500Medium', bold: 'Roboto_700Bold' } as const;
+const originalCreate = StyleSheet.create.bind(StyleSheet);
+const styleSheet = StyleSheet as unknown as { create: typeof StyleSheet.create; __maicareRoboto?: boolean };
+if (!styleSheet.__maicareRoboto) {
+  styleSheet.create = ((styles: Record<string, Record<string, unknown>>) => originalCreate(Object.fromEntries(Object.entries(styles).map(([name, style]) => {
+    if (!style || typeof style !== 'object') return [name, style];
+    const next = { ...style };
+    const weight = String(next.fontWeight || '');
+    if (weight) {
+      next.fontFamily = weight === '500' || weight === '600' ? fonts.medium : weight === '700' || weight === '800' || weight === '900' ? fonts.bold : fonts.regular;
+      delete next.fontWeight;
+    }
+    return [name, next];
+  })))) as typeof StyleSheet.create;
+  styleSheet.__maicareRoboto = true;
+}
 export const colors = {
   primary: '#24734B', primaryDark: '#124C34', primarySoft: '#E8F3EC', accent: '#D7A928',
   accentSoft: '#FFF5CF', background: '#F8F5EC', surface: '#FFFFFF', text: '#18221C',

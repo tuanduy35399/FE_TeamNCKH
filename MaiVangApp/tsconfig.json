@@ -3,7 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node", "react"]
   },
   "include": ["**/*.ts", "**/*.tsx"]
 }

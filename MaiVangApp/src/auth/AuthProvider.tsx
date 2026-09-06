@@ -3,6 +3,7 @@ import * as authApi from '../api/auth';
 import { configureApiSession } from '../api/client';
 import { clearSession, loadSession, saveSession } from './storage';
 import type { Account, Session } from '../types/domain';
+import { clearLocalImageHistoryForUser } from '../history/imageHistory';
 
 type AuthContextValue = {
   status: 'restoring' | 'unauthenticated' | 'authenticated';
@@ -53,7 +54,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (refresh) { try { await authApi.logout(refresh); } catch { /* Local logout remains safe if revocation is unreachable. */ } }
       await invalidate();
     },
-    deleteAccount: async () => { await authApi.deleteMe(); await invalidate('Tài khoản đã được xóa.'); },
+    deleteAccount: async () => {
+      const userId = account?.id;
+      await authApi.deleteMe();
+      if (userId) await clearLocalImageHistoryForUser(userId).catch(() => undefined);
+      await invalidate('Tài khoản đã được xóa.');
+    },
   }), [status, account, notice]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

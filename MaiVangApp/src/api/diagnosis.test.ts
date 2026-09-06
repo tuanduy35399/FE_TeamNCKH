@@ -2,7 +2,165 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { submitDiagnosis } from './diagnosis';
 import { ApiError } from './errors';
+import { getHistory, getHistoryDetail } from './history';
 
-test('production diagnosis does not invent an answer when capability is unavailable', async () => {
-  await assert.rejects(() => submitDiagnosis({ text: 'Lá mai bị vàng?' }), (error: unknown) => error instanceof ApiError && error.kind === 'unavailable' && !/backend|endpoint|api|model|rag|yolo/i.test(error.userMessage));
+const timestamp = '2026-09-03T10:00:00Z';
+const historyDto = (id: number, title = 'MaiCare conversation', updatedAt = timestamp) => ({
+  id, title, created_at: timestamp, updated_at: updatedAt,
+});
+
+test('rejects an empty diagnosis without making a request', async () => {
+  await assert.rejects(() => submitDiagnosis({}), (error: unknown) => error instanceof ApiError && error.status === 422);
+});
+
+test('HIST-01 and HIST-03 create one persistent session and reuse it for a follow-up', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({ url: String(input), init });
+    if (calls.length === 1) return new Response(JSON.stringify(historyDto(7, 'Yellow leaves')), { status: 201 });
+    return new Response(JSON.stringify({ question: 'Question', answer: 'Answer', history_id: 7 }), { status: 200 });
+  };
+  try {
+    const first = await submitDiagnosis({ text: 'Question' });
+    const followUp = await submitDiagnosis({ text: 'Follow-up', conversationId: first.conversationId });
+    assert.equal(first.conversationId, 7);
+    assert.equal(followUp.conversationId, 7);
+    assert.equal(calls.filter(call => call.url.endsWith('/api/v1/history/')).length, 1);
+    assert.equal(calls.filter(call => call.url.endsWith('/api/v1/history/7/chat/')).length, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('HIST-06 successful image creates one session and preserves bytes, filename, MIME, and omitted question', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: RequestInit[] = [];
+  globalThis.fetch = async (_input, init) => {
+    calls.push(init || {});
+    if (calls.length === 1) return new Response(JSON.stringify(historyDto(8, 'Image check')), { status: 201 });
+    return new Response(JSON.stringify({ answer: 'Diagnosis', history_id: 8, detections: [{ name: 'đốm lá', confidence: 0.91 }] }), { status: 200 });
+  };
+  try {
+    const result = await submitDiagnosis({ image: { uri: 'file:///leaf.jpg', name: 'leaf.jpg', mimeType: 'image/jpeg', file: new Blob(['leaf-bytes'], { type: 'image/jpeg' }) } });
+    const form = calls[1]!.body as FormData;
+    const file = form.get('image') as Blob & { name?: string };
+    assert.equal(file.name, 'leaf.jpg');
+    assert.equal(file.type, 'image/jpeg');
+    assert.equal(Buffer.from(await file.arrayBuffer()).toString(), 'leaf-bytes');
+    assert.equal(form.has('question'), false);
+    assert.equal(new Headers(calls[1]!.headers).has('Content-Type'), false);
+    assert.equal(calls.length, 2);
+    assert.deepEqual(result.detections, [{ label: 'đốm lá', confidence: 0.91 }]);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('multipart image-plus-text uses the exact optional question field', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: RequestInit[] = [];
+  globalThis.fetch = async (_input, init) => {
+    calls.push(init || {});
+    if (calls.length === 1) return new Response(JSON.stringify(historyDto(9, 'Brown spots')), { status: 201 });
+    return new Response(JSON.stringify({ answer: 'Diagnosis', history_id: 9, detections: [] }), { status: 200 });
+  };
+  try {
+    await submitDiagnosis({ image: { uri: 'file:///leaf.png', name: 'leaf.png', mimeType: 'image/png', file: new Blob(['png-bytes'], { type: 'image/png' }) }, text: 'Brown spots' });
+    const form = calls[1]!.body as FormData;
+    assert.equal((form.get('image') as Blob & { name?: string }).name, 'leaf.png');
+    assert.equal(form.get('question'), 'Brown spots');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('HIST-07 failed image removes the newly created empty session', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; method: string }> = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({ url: String(input), method: init?.method || 'GET' });
+    if (calls.length === 1) return new Response(JSON.stringify(historyDto(10, 'Image check')), { status: 201 });
+    if (calls.length === 2) return new Response(JSON.stringify({ image: ['invalid'] }), { status: 400 });
+    return new Response(null, { status: 204 });
+  };
+  try {
+    await assert.rejects(() => submitDiagnosis({ image: { uri: 'file:///leaf.jpg', name: 'leaf.jpg', file: new Blob(['leaf']) } }), ApiError);
+    assert.deepEqual(calls.map(call => call.method), ['POST', 'POST', 'DELETE']);
+    assert.equal(calls[2]!.url.endsWith('/api/v1/history/10/'), true);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('HIST-07 malformed success also removes the newly created session', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; method: string }> = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({ url: String(input), method: init?.method || 'GET' });
+    if (calls.length === 1) return new Response(JSON.stringify(historyDto(11, 'Malformed result')), { status: 201 });
+    if (calls.length === 2) return new Response(JSON.stringify({ answer: '', history_id: 11 }), { status: 200 });
+    return new Response(null, { status: 204 });
+  };
+  try {
+    await assert.rejects(() => submitDiagnosis({ text: 'Question' }), (error: unknown) => error instanceof ApiError && error.kind === 'malformed');
+    assert.deepEqual(calls.map(call => call.method), ['POST', 'POST', 'DELETE']);
+    assert.equal(calls[2]!.url.endsWith('/api/v1/history/11/'), true);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('HIST-08 retry success leaves exactly the successful session', async () => {
+  const originalFetch = globalThis.fetch;
+  let nextId = 10;
+  let failed = false;
+  const created: number[] = [];
+  const deleted: number[] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith('/api/v1/history/')) {
+      const id = ++nextId; created.push(id);
+      return new Response(JSON.stringify(historyDto(id, 'Image check')), { status: 201 });
+    }
+    if (init?.method === 'DELETE') {
+      deleted.push(Number(url.split('/history/')[1]?.split('/')[0]));
+      return new Response(null, { status: 204 });
+    }
+    if (!failed) {
+      failed = true;
+      return new Response(JSON.stringify({ detail: 'temporary failure' }), { status: 503 });
+    }
+    return new Response(JSON.stringify({ answer: 'Diagnosis', history_id: nextId, detections: [] }), { status: 200 });
+  };
+  const input = { image: { uri: 'file:///leaf.jpg', name: 'leaf.jpg', file: new Blob(['leaf']) } };
+  try {
+    await assert.rejects(() => submitDiagnosis(input), ApiError);
+    const result = await submitDiagnosis(input);
+    assert.deepEqual(created, [11, 12]);
+    assert.deepEqual(deleted, [11]);
+    assert.equal(result.conversationId, 12);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('HIST-02 detail keeps multiple messages inside one conversation', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    ...historyDto(20, 'One conversation'),
+    messages: [
+      { id: 1, role: 'user', content: 'Question', created_at: timestamp },
+      { id: 2, role: 'assistant', content: 'Answer', created_at: timestamp },
+      { id: 3, role: 'user', content: 'Follow-up', created_at: timestamp },
+      { id: 4, role: 'assistant', content: 'Second answer', created_at: timestamp },
+    ],
+  }), { status: 200 });
+  try {
+    const detail = await getHistoryDetail(20);
+    assert.equal(detail.id, 20);
+    assert.equal(detail.messages?.length, 4);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('HIST-04 and HIST-09 retain distinct sessions by ID and remove duplicate source IDs', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify([
+    historyDto(30, 'Same text', '2026-09-03T10:00:00Z'),
+    historyDto(31, 'Same text', '2026-09-03T12:00:00Z'),
+    historyDto(30, 'Same text', '2026-09-03T10:00:00Z'),
+  ]), { status: 200 });
+  try {
+    const list = await getHistory();
+    assert.deepEqual(list.map(item => item.id), [31, 30]);
+    assert.equal(list.length, 2);
+  } finally { globalThis.fetch = originalFetch; }
 });

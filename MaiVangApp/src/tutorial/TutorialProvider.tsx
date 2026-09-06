@@ -4,7 +4,7 @@ import { colors, radius, spacing } from '../theme';
 import { isTutorialCompleted, saveTutorialCompleted } from './storage';
 
 type TargetName = 'image' | 'description' | 'submit' | 'history' | 'account';
-type Target = { ref: RefObject<View>; ensureVisible?: () => void };
+type Target = { ref: RefObject<View | null>; ensureVisible?: () => void };
 type Rect = { x: number; y: number; width: number; height: number };
 type TutorialContextValue = {
   registerTarget: (name: TargetName, target: Target) => () => void;
@@ -17,7 +17,7 @@ const steps: Array<{ target?: TargetName; title: string; text: string }> = [
   { target: 'image', title: 'Thêm ảnh lá mai', text: 'Chụp ảnh mới hoặc chọn ảnh rõ, đủ sáng từ thiết bị. Ảnh giúp MaiCare kiểm tra tình trạng lá cụ thể hơn.' },
   { target: 'description', title: 'Mô tả thêm', text: 'Bạn có thể ghi những dấu hiệu đã quan sát, nhưng phần này không bắt buộc nếu bạn đã gửi ảnh.' },
   { target: 'submit', title: 'Kiểm tra hoặc đặt câu hỏi', text: 'Có ảnh: MaiCare sẽ kiểm tra ảnh. Chỉ có nội dung chữ: MaiCare sẽ trả lời như một trợ lý chăm sóc mai.' },
-  { target: 'history', title: 'Xem lại', text: 'Khi hệ thống hỗ trợ lưu lịch sử, bạn có thể xem lại những lần kiểm tra và câu hỏi trước đây tại đây.' },
+  { target: 'history', title: 'Xem lại', text: 'Xem lại những lần kiểm tra và câu hỏi trước đây tại đây.' },
   { target: 'account', title: 'Tài khoản của bạn', text: 'Quản lý thông tin tài khoản, đăng xuất và mở lại hướng dẫn sử dụng khi cần.' },
 ];
 
@@ -97,7 +97,7 @@ function TutorialOverlay({ active, step, rect, screen, next, back, skip }: { act
         <View style={styles.actions}>
           <Pressable accessibilityRole="button" onPress={skip} style={styles.skip}><Text style={styles.skipText}>Bỏ qua</Text></Pressable>
           <View style={styles.navActions}>{step > 0 && <Pressable accessibilityRole="button" onPress={back} style={styles.back}><Text style={styles.backText}>Quay lại</Text></Pressable>}
-            <Pressable testID="tutorial-next" accessibilityRole="button" onPress={next} style={styles.next}><Text style={styles.nextText}>{step === 0 ? 'Bắt đầu' : step === steps.length - 1 ? 'Bắt đầu sử dụng' : 'Tiếp'}</Text></Pressable></View>
+            <Pressable testID="tutorial-next" accessibilityRole="button" onPress={next} style={styles.next}><Text style={styles.nextText}>{step === steps.length - 1 ? 'Bắt đầu sử dụng' : 'Tiếp'}</Text></Pressable></View>
         </View>
       </View>;
   if (Platform.OS === 'web' && focus) return <>
