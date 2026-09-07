@@ -41,6 +41,7 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   await waitForAnswerOrServiceError(1);
   await page.getByRole('tab', { name: /Lịch sử/ }).click();
   const firstHistory = page.getByRole('button').filter({ hasText: 'Cách chăm mai sau Tết?' }).first(); await expect(firstHistory).toBeVisible(); await firstHistory.click();
+  await expect(page.getByTestId('user-message').filter({ hasText: 'Cách chăm mai sau Tết?' })).toBeVisible({ timeout: 45_000 });
   await page.getByPlaceholder('Nhắn tin cho MaiCare...').fill('Tôi nên theo dõi trong bao lâu?'); await page.getByTestId('chat-send').click();
   await waitForAnswerOrServiceError(2);
 
