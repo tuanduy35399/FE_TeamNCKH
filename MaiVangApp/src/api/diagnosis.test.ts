@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { submitDiagnosis } from './diagnosis';
 import { ApiError } from './errors';
-import { getHistory, getHistoryDetail } from './history';
+import { getHistory, getHistoryDetail, nativeImageDescriptor, sendHistoryImage } from './history';
 
 const timestamp = '2026-09-03T10:00:00Z';
 const historyDto = (id: number, title = 'MaiCare conversation', updatedAt = timestamp) => ({
@@ -162,5 +162,51 @@ test('HIST-04 and HIST-09 retain distinct sessions by ID and remove duplicate so
     const list = await getHistory();
     assert.deepEqual(list.map(item => item.id), [31, 30]);
     assert.equal(list.length, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('native iOS file upload descriptor preserves URI, filename, MIME, and question', () => {
+  assert.deepEqual(nativeImageDescriptor({ uri: 'file:///var/mobile/IMG_0230.jpg', name: 'IMG_0230.jpg', mimeType: 'image/jpeg' }, 'test diagnosis'), {
+    uri: 'file:///var/mobile/IMG_0230.jpg', name: 'IMG_0230.jpg', mimeType: 'image/jpeg', parameters: { question: 'test diagnosis' },
+  });
+});
+
+test('HTTP 503 is an upstream diagnosis failure, never an empty-detections success', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ detail: 'YOLO service unavailable' }), { status: 503 });
+  try {
+    await assert.rejects(
+      () => sendHistoryImage(41, { uri: 'file:///leaf.jpg', name: 'leaf.jpg', file: new Blob(['leaf'], { type: 'image/jpeg' }) }),
+      (error: unknown) => error instanceof ApiError
+        && error.status === 503
+        && error.userMessage.includes('chẩn đoán hình ảnh hiện chưa sẵn sàng'),
+    );
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('HTTP 200 with detections [] remains a real successful no-detection response', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    question: 'Kiểm tra lá', answer: 'Không thấy dấu hiệu đủ rõ.', history_id: 42, detections: [],
+  }), { status: 200 });
+  try {
+    const result = await sendHistoryImage(42, { uri: 'file:///leaf.jpg', name: 'leaf.jpg', file: new Blob(['leaf'], { type: 'image/jpeg' }) }, 'Kiểm tra lá');
+    assert.equal(result.history_id, 42);
+    assert.deepEqual(result.detections, []);
+    assert.equal(result.answer, 'Không thấy dấu hiệu đủ rõ.');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('image no-status transport failure remains distinct from HTTP 503', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new TypeError('Network request failed'); };
+  try {
+    await assert.rejects(
+      () => sendHistoryImage(43, { uri: 'file:///leaf.jpg', name: 'leaf.jpg', file: new Blob(['leaf'], { type: 'image/jpeg' }) }),
+      (error: unknown) => error instanceof ApiError
+        && error.status === undefined
+        && error.kind === 'network'
+        && error.userMessage.includes('Không thể kết nối máy chủ'),
+    );
   } finally { globalThis.fetch = originalFetch; }
 });

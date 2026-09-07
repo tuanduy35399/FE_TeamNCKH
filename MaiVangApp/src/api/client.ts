@@ -1,5 +1,5 @@
 import { API_BASE_URL, AUTH_TIMEOUT_MS } from './config';
-import { ApiError, apiMessage, fieldErrorsFromPayload } from './errors';
+import { ApiError, apiMessage, fieldErrorsFromPayload, safeDebugDetail, transportDiagnostics } from './errors';
 import type { Session } from '../types/domain';
 import { AUTH_ENDPOINTS } from './endpoints';
 type SessionHooks = { getSession: () => Session | null; updateSession: (session: Session) => Promise<void>; invalidate: (message?: string) => Promise<void> };
@@ -13,6 +13,10 @@ async function parseResponse(response: Response): Promise<unknown> {
     if (response.ok) throw new ApiError('MaiCare nhận được dữ liệu không hợp lệ. Vui lòng thử lại.', response.status, undefined, 'malformed');
     return { detail: text.slice(0, 200) };
   }
+}
+function parseTextPayload(text: string): unknown {
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return { detail: text.slice(0, 200) }; }
 }
 function logValidation(status: number, path: string, payload: unknown) {
   if (process.env.NODE_ENV === 'production' || status !== 422 || !payload || typeof payload !== 'object') return;
@@ -43,8 +47,8 @@ async function refreshAccessToken(): Promise<string> {
     return next.accessToken;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Yêu cầu đang mất nhiều thời gian hơn dự kiến. Vui lòng thử lại.', undefined, undefined, 'timeout');
-    throw new ApiError('Không thể kết nối. Kiểm tra mạng rồi thử lại.', undefined, undefined, 'network');
+    if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', undefined, undefined, 'timeout', undefined, transportDiagnostics(error, true));
+    throw new ApiError('Không thể kết nối máy chủ. Kiểm tra kết nối và thử lại.', undefined, undefined, 'network', undefined, transportDiagnostics(error));
   } finally { clearTimeout(timeout); }
 }
 type ApiRequestOptions = RequestInit & { auth?: boolean; timeoutMs?: number; retryAuth?: boolean };
@@ -85,12 +89,45 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     const payload = await parseResponse(response);
     if (!response.ok) {
       logValidation(response.status, path, payload);
-      throw new ApiError(apiMessage(response.status, payload), response.status, fieldErrorsFromPayload(payload));
+      throw new ApiError(apiMessage(response.status, payload), response.status, fieldErrorsFromPayload(payload), 'http', safeDebugDetail(payload));
     }
     return payload as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Yêu cầu đang mất nhiều thời gian hơn dự kiến. Vui lòng thử lại.', undefined, undefined, 'timeout');
-    throw new ApiError('Không thể kết nối. Kiểm tra mạng rồi thử lại.', undefined, undefined, 'network');
+    if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', undefined, undefined, 'timeout', undefined, transportDiagnostics(error, true));
+    throw new ApiError('Không thể kết nối máy chủ. Kiểm tra kết nối và thử lại.', undefined, undefined, 'network', undefined, transportDiagnostics(error));
   } finally { clearTimeout(timeout); }
+}
+
+export type NativeMultipartFile = { uri: string; mimeType: string; fieldName: string; parameters?: Record<string, string> };
+export async function apiNativeMultipartUpload<T>(path: string, file: NativeMultipartFile, timeoutMs: number): Promise<T> {
+  const FileSystem = require('expo-file-system/legacy') as typeof import('expo-file-system/legacy');
+  const upload = async (accessToken: string) => {
+    const task = FileSystem.createUploadTask(`${API_BASE_URL}${path}`, file.uri, {
+      httpMethod: 'POST', uploadType: FileSystem.FileSystemUploadType.MULTIPART, fieldName: file.fieldName,
+      mimeType: file.mimeType, parameters: file.parameters, headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+    });
+    let didTimeout = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => { didTimeout = true; void task.cancelAsync(); reject(new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', undefined, undefined, 'timeout', undefined, { name: 'UploadTimeout', message: `Upload exceeded ${timeoutMs}ms`, timeout: true, abort: true, network: false })); }, timeoutMs); });
+      const result = await Promise.race([task.uploadAsync(), timeout]);
+      if (!result) throw new Error('Native upload returned no result');
+      return result;
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(didTimeout ? 'Máy chủ phản hồi quá lâu. Vui lòng thử lại.' : 'Không thể kết nối máy chủ. Kiểm tra kết nối và thử lại.', undefined, undefined, didTimeout ? 'timeout' : 'network', undefined, transportDiagnostics(error, didTimeout));
+    } finally { if (timer) clearTimeout(timer); }
+  };
+  const session = hooks?.getSession();
+  if (!session?.accessToken) throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
+  let result = await upload(session.accessToken);
+  if (result.status === 401 && hooks) {
+    try { refreshPromise ||= refreshAccessToken().finally(() => { refreshPromise = null; }); result = await upload(await refreshPromise); }
+    catch (error) { if (error instanceof ApiError && ['network', 'timeout'].includes(error.kind)) throw error; await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'); throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401); }
+  }
+  if (result.status === 401 && hooks) { await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'); throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401); }
+  const payload = parseTextPayload(result.body);
+  if (result.status < 200 || result.status >= 300) throw new ApiError(apiMessage(result.status, payload), result.status, fieldErrorsFromPayload(payload), 'http', safeDebugDetail(payload));
+  return payload as T;
 }

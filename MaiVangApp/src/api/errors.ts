@@ -1,6 +1,7 @@
 export type FieldErrors = Record<string, string>;
+export type TransportDiagnostics = { name?: string; message?: string; code?: string; timeout: boolean; abort: boolean; network: boolean };
 export class ApiError extends Error {
-  constructor(public userMessage: string, public status?: number, public fieldErrors?: FieldErrors, public kind: 'http' | 'network' | 'browser' | 'timeout' | 'malformed' | 'unavailable' = 'http') { super(userMessage); this.name = 'ApiError'; }
+  constructor(public userMessage: string, public status?: number, public fieldErrors?: FieldErrors, public kind: 'http' | 'network' | 'browser' | 'timeout' | 'malformed' | 'unavailable' = 'http', public debugDetail?: string, public transport?: TransportDiagnostics) { super(userMessage); this.name = 'ApiError'; }
 }
 const messages: Record<number, string> = {
   400: 'Thông tin gửi lên chưa hợp lệ.', 401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
@@ -29,4 +30,19 @@ export function apiMessage(status: number, payload: unknown): string {
     if (typeof detail === 'string' && detail.length < 240) return detail;
   }
   return messages[status] || 'Không thể hoàn tất yêu cầu.';
+}
+export function safeDebugDetail(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const value = payload as { detail?: unknown; error?: unknown };
+  const parts = [value.detail, value.error].filter((item): item is string => typeof item === 'string');
+  if (!parts.length) return undefined;
+  return parts.join(' | ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) || undefined;
+}
+export function transportDiagnostics(error: unknown, timeout = false): TransportDiagnostics {
+  const value = error && typeof error === 'object' ? error as { name?: unknown; message?: unknown; code?: unknown } : {};
+  const name = typeof value.name === 'string' ? value.name : undefined;
+  const message = typeof value.message === 'string' ? value.message.slice(0, 240) : String(error).slice(0, 240);
+  const code = typeof value.code === 'string' || typeof value.code === 'number' ? String(value.code) : undefined;
+  const abort = name === 'AbortError' || /cancel/i.test(name || '') || /aborted|cancelled/i.test(message);
+  return { name, message, code, timeout, abort, network: !timeout };
 }

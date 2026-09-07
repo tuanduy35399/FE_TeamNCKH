@@ -28,7 +28,7 @@ export function HistoryScreen() {
       const localById = new Map((account?.id ? await getLocalImageHistory(account.id) : []).map(item => [item.conversationId, item]));
       setItems(serverItems.map(item => {
         const metadata = localById.get(item.id);
-        return metadata ? { ...item, kind: 'image' as const, title: metadata.title, description: metadata.description, detections: metadata.detections } : { ...item, kind: 'text' as const };
+        return metadata ? { ...item, kind: 'image' as const, description: metadata.description, detections: metadata.detections } : { ...item, kind: 'text' as const };
       }));
     }
     catch { setError('Chưa thể tải lịch sử. Vui lòng thử lại.'); }
