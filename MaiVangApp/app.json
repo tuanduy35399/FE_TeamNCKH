@@ -46,8 +46,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "51153662-4c53-4b60-8efb-77f3fd3fb489"
+        "projectId": "bc2d3ca6-2440-4866-95f6-1ab3f2cf9137"
       }
-    }
+    },
+    "owner": "duyduyctu"
   }
 }
