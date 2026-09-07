@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { LoadingState, StateView } from '../../components/StateView';
-import { getHistory } from '../../api/history';
+import { deleteHistory, getHistory, renameHistory } from '../../api/history';
 import type { HistoryItem } from '../../types/domain';
 import { colors, radius, spacing } from '../../theme';
 import { formatDateTime } from '../../utils/date';
@@ -18,6 +18,9 @@ export function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState<HistoryItem>();
+  const [titleDraft, setTitleDraft] = useState('');
+  const [saving, setSaving] = useState(false);
   const load = useCallback(async (refresh = false) => {
     refresh ? setRefreshing(true) : setLoading(true); setError('');
     try {
@@ -31,21 +34,40 @@ export function HistoryScreen() {
     catch { setError('Chưa thể tải lịch sử. Vui lòng thử lại.'); }
     finally { setLoading(false); setRefreshing(false); }
   }, [account?.id]);
+  function openConversation(item: HistoryItem) { navigation.navigate('Chat', { historyId: item.id, openKey: Date.now() }); }
+  function confirmDelete(item: HistoryItem) {
+    Alert.alert('Xóa cuộc trò chuyện?', 'Nội dung đã xóa không thể khôi phục.', [
+      { text: 'Hủy', style: 'cancel' },
+      { text: 'Xóa', style: 'destructive', onPress: () => void deleteHistory(item.id).then(() => setItems(current => current.filter(value => value.id !== item.id))).catch(() => setError('Không thể xóa cuộc trò chuyện.')) },
+    ]);
+  }
+  async function saveRename() {
+    const title = titleDraft.trim(); if (!editing || !title || saving) return;
+    setSaving(true);
+    try { const updated = await renameHistory(editing.id, title); setItems(current => current.map(item => item.id === updated.id ? { ...item, title: updated.title } : item)); setEditing(undefined); }
+    catch { setError('Không thể đổi tên cuộc trò chuyện.'); }
+    finally { setSaving(false); }
+  }
   useFocusEffect(useCallback(() => { void load(); }, [load]));
   if (loading) return <Screen><LoadingState label="Đang tải lịch sử..." /></Screen>;
   if (error && !items.length) return <Screen><View style={styles.header}><Text style={styles.title}>Lịch sử</Text><Text style={styles.subtitle}>Những lần kiểm tra và câu hỏi trước đây</Text></View><StateView icon="time-outline" title="Chưa thể tải lịch sử" message={error} actionLabel="Thử lại" onAction={() => load()} /></Screen>;
   return <Screen><View style={styles.header}><Text style={styles.title}>Lịch sử</Text><Text style={styles.subtitle}>Những lần kiểm tra và câu hỏi trước đây</Text></View>
     <FlatList data={items} keyExtractor={item => String(item.id)} contentContainerStyle={[styles.list, !items.length && styles.emptyList]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.primary} />}
       ListEmptyComponent={<StateView title="Chưa có hoạt động nào." />}
-      renderItem={({ item }) => <Pressable accessibilityRole="button" onPress={() => navigation.navigate('HistoryDetail', { item })} style={styles.card}>
+      renderItem={({ item }) => <Pressable accessibilityRole="button" onPress={() => openConversation(item)} style={styles.card}>
         <View style={styles.historyIcon}><Ionicons name={item.kind === 'image' ? 'image-outline' : 'chatbubble-outline'} size={22} color={colors.primary} /></View>
         <View style={styles.cardBody}><Text style={styles.date}>{formatDateTime(item.updatedAt)}</Text><Text numberOfLines={2} style={styles.preview}>{item.title || 'Cuộc trò chuyện MaiCare'}</Text></View>
-        <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+        <Pressable accessibilityLabel="Tùy chọn cuộc trò chuyện" hitSlop={8} onPress={event => { event.stopPropagation(); setEditing(item); setTitleDraft(item.title); }} style={styles.more}><Ionicons name="ellipsis-vertical" size={20} color={colors.muted} /></Pressable>
       </Pressable>} />
+    <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => setEditing(undefined)}><Pressable style={styles.overlay} onPress={() => setEditing(undefined)}><Pressable style={styles.dialog} onPress={() => undefined}>
+      <Text style={styles.dialogTitle}>Quản lý cuộc trò chuyện</Text><TextInput value={titleDraft} onChangeText={setTitleDraft} maxLength={200} selectTextOnFocus style={styles.renameInput} />
+      <View style={styles.dialogActions}><Pressable onPress={() => { const item = editing; setEditing(undefined); if (item) confirmDelete(item); }} style={styles.deleteButton}><Text style={styles.deleteText}>Xóa</Text></Pressable><View style={styles.actionSpacer} /><Pressable onPress={() => setEditing(undefined)} style={styles.cancelButton}><Text style={styles.cancelText}>Hủy</Text></Pressable><Pressable disabled={!titleDraft.trim() || saving} onPress={() => void saveRename()} style={styles.saveButton}><Text style={styles.saveText}>{saving ? 'Đang lưu...' : 'Lưu'}</Text></Pressable></View>
+    </Pressable></Pressable></Modal>
   </Screen>;
 }
 const styles = StyleSheet.create({
   header: { padding: spacing.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }, title: { color: colors.primaryDark, fontSize: 23, fontWeight: '800' }, subtitle: { color: colors.muted, marginTop: 2 },
   list: { padding: spacing.md, gap: spacing.sm }, emptyList: { flexGrow: 1 }, card: { minHeight: 88, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
   historyIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }, cardBody: { flex: 1, gap: 4 }, date: { color: colors.muted, fontSize: 12 }, preview: { color: colors.text, fontWeight: '700', lineHeight: 20 },
+  more: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }, overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.overlay }, dialog: { width: '100%', maxWidth: 390, padding: spacing.lg, gap: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface }, dialogTitle: { color: colors.primaryDark, fontSize: 19, fontWeight: '900' }, renameInput: { minHeight: 48, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, color: colors.text, backgroundColor: colors.background }, dialogActions: { flexDirection: 'row', alignItems: 'center', gap: 8 }, actionSpacer: { flex: 1 }, deleteButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }, deleteText: { color: colors.danger, fontWeight: '800' }, cancelButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 }, cancelText: { color: colors.muted, fontWeight: '800' }, saveButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: radius.md, backgroundColor: colors.primary }, saveText: { color: '#fff', fontWeight: '800' },
 });

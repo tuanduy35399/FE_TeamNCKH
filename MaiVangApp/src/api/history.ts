@@ -26,6 +26,9 @@ export async function createHistory(title: string): Promise<HistoryItem> {
 export async function deleteHistory(id: number): Promise<void> {
   await apiRequest(HISTORY_ENDPOINTS.detail(id), { method: 'DELETE', auth: true });
 }
+export async function renameHistory(id: number, title: string): Promise<HistoryItem> {
+  return normalizeHistoryDetail(await apiRequest<HistoryDetailDto>(HISTORY_ENDPOINTS.detail(id), { method: 'PATCH', auth: true, body: JSON.stringify({ title }) }));
+}
 export async function sendHistoryText(id: number, question: string): Promise<InteractionDto> {
   return apiRequest<InteractionDto>(HISTORY_ENDPOINTS.chat(id), { method: 'POST', auth: true, timeoutMs: AI_TIMEOUT_MS, body: JSON.stringify({ question }) });
 }

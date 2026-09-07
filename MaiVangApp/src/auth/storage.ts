@@ -11,7 +11,7 @@ export async function loadSession(): Promise<Session | null> {
     const value = Platform.OS === 'web' ? globalThis.localStorage?.getItem(KEY) : await SecureStore.getItemAsync(KEY);
     if (!value) return null;
     const parsed = JSON.parse(value) as Partial<Session>;
-    return parsed.accessToken && parsed.refreshToken ? { accessToken: parsed.accessToken, refreshToken: parsed.refreshToken } : null;
+    return parsed.accessToken && parsed.refreshToken ? { accessToken: parsed.accessToken, refreshToken: parsed.refreshToken, account: parsed.account } : null;
   } catch { await clearSession(); return null; }
 }
 export async function clearSession(): Promise<void> {

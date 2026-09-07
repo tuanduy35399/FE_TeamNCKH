@@ -3,19 +3,16 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { LoadingState } from '../components/StateView';
 import { AccountScreen } from '../screens/account/AccountScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
-import { DiagnosisScreen } from '../screens/diagnosis/DiagnosisScreen';
-import { HistoryDetailScreen } from '../screens/history/HistoryDetailScreen';
+import { ChatScreen } from '../screens/chat/ChatScreen';
 import { HistoryScreen } from '../screens/history/HistoryScreen';
 import { colors, fonts } from '../theme';
 import type { AuthStackParamList, MainStackParamList, TabParamList } from './types';
-import { TutorialProvider, useTutorial } from '../tutorial/TutorialProvider';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<MainStackParamList>();
@@ -28,29 +25,23 @@ function AuthNavigator() {
     <AuthStack.Screen name="Register" component={RegisterScreen} options={{ title: 'Đăng ký' }} />
   </AuthStack.Navigator>;
 }
-const icons: Record<keyof TabParamList, keyof typeof Ionicons.glyphMap> = { Diagnosis: 'leaf-outline', History: 'time-outline', Account: 'person-outline' };
-const labels: Record<keyof TabParamList, string> = { Diagnosis: 'Chẩn đoán', History: 'Lịch sử', Account: 'Tài khoản' };
+const icons: Record<keyof TabParamList, keyof typeof Ionicons.glyphMap> = { Chat: 'chatbubble-ellipses-outline', History: 'time-outline', Account: 'person-outline' };
+const labels: Record<keyof TabParamList, string> = { Chat: 'Trò chuyện', History: 'Lịch sử', Account: 'Tài khoản' };
 function AppTabs() {
   return <Tabs.Navigator screenOptions={({ route }) => ({
     headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted,
     tabBarStyle: { height: 66, paddingTop: 7, paddingBottom: 8, borderTopColor: colors.border },
+    tabBarHideOnKeyboard: true,
     tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.medium },
     tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <Ionicons name={icons[route.name]} color={color} size={size} />,
-    tabBarButton: props => <TutorialTabButton name={route.name === 'History' ? 'history' : route.name === 'Account' ? 'account' : undefined} {...props} />,
   })}>
-    <Tabs.Screen name="Diagnosis" component={DiagnosisScreen} />
+    <Tabs.Screen name="Chat" component={ChatScreen} />
     <Tabs.Screen name="History" component={HistoryScreen} />
     <Tabs.Screen name="Account" component={AccountScreen} />
   </Tabs.Navigator>;
 }
-function TutorialTabButton({ name, ...props }: any) {
-  const ref = useRef<View>(null);
-  const { registerTarget } = useTutorial();
-  useEffect(() => name ? registerTarget(name, { ref }) : undefined, [name, registerTarget]);
-  return <Pressable ref={ref} {...props} testID={name ? `tutorial-target-${name}` : undefined} accessibilityRole="button" style={props.style} />;
-}
 function MainNavigator() {
-  return <TutorialProvider><MainStack.Navigator><MainStack.Screen name="Tabs" component={AppTabs} options={{ headerShown: false }} /><MainStack.Screen name="HistoryDetail" component={HistoryDetailScreen} options={{ title: 'Chi tiết lịch sử', headerTintColor: colors.primaryDark, headerShadowVisible: false }} /></MainStack.Navigator></TutorialProvider>;
+  return <MainStack.Navigator><MainStack.Screen name="Tabs" component={AppTabs} options={{ headerShown: false }} /></MainStack.Navigator>;
 }
 export function RootNavigator() {
   const { status } = useAuth();

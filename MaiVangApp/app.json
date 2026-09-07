@@ -21,6 +21,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.fe_team_nckh.app",
+      "softwareKeyboardLayoutMode": "resize",
       "blockedPermissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -38,13 +39,6 @@
           "photosPermission": "Cho phép MaiCare truy cập thư viện để chọn ảnh lá mai.",
           "cameraPermission": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai.",
           "microphonePermission": false
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Cho phép MaiCare sử dụng camera để chụp ảnh lá mai.",
-          "recordAudioAndroid": false
         }
       ],
       "expo-secure-store",

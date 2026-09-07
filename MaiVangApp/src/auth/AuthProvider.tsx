@@ -35,8 +35,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const stored = await loadSession();
       if (!stored) { setStatus('unauthenticated'); return; }
       sessionRef.current = stored;
-      try { setAccount(await authApi.getMe()); setStatus('authenticated'); }
-      catch { await invalidate('Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại.'); }
+      if (stored.account) setAccount(stored.account);
+      try {
+        const freshAccount = await authApi.getMe();
+        setAccount(freshAccount); await persist({ ...sessionRef.current!, account: freshAccount }); setStatus('authenticated');
+      } catch (error) {
+        if (error instanceof Error && 'status' in error && (error as { status?: number }).status === 401) await invalidate('Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại.');
+        else { setNotice('Không thể cập nhật tài khoản lúc này. Phiên đăng nhập vẫn được giữ.'); setStatus('authenticated'); }
+      }
     })();
     return () => configureApiSession(null);
   }, []);
@@ -46,7 +52,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     signIn: async (username, password) => {
       const session = await authApi.login(username, password);
       await persist(session);
-      try { setAccount(await authApi.getMe()); setNotice(null); setStatus('authenticated'); }
+      try { const nextAccount = await authApi.getMe(); setAccount(nextAccount); await persist({ ...session, account: nextAccount }); setNotice(null); setStatus('authenticated'); }
       catch (error) { await invalidate(); throw error; }
     },
     signOut: async () => {

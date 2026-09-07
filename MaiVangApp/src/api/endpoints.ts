@@ -11,4 +11,3 @@ export const HISTORY_ENDPOINTS = {
   chat: (id: number) => `/api/v1/history/${id}/chat/`,
   imageChat: (id: number) => `/api/v1/history/${id}/chat/image/`,
 } as const;
-export const CHAT_ENDPOINTS = { chat: '/chat', image: '/chat/image' } as const;

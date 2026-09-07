@@ -5,7 +5,6 @@ const { URL } = require('node:url');
 const listenHost = '127.0.0.1';
 const listenPort = 8010;
 const djangoTarget = new URL(process.env.MAIVANG_DJANGO_ORIGIN || 'https://chat-bot-maivang-backend.onrender.com');
-const chatTarget = new URL(process.env.MAIVANG_CHAT_ORIGIN || 'https://chat-service-nckh.onrender.com');
 const allowedOrigins = new Set(['http://localhost:5175', 'http://127.0.0.1:5175']);
 const djangoPrefixes = ['/api/v1/user/', '/api/v1/history/', '/api/v1/diseases/', '/api/v1/schema/'];
 const hopByHop = new Set(['connection', 'host', 'transfer-encoding']);
@@ -30,14 +29,13 @@ const server = http.createServer((request, response) => {
     response.end(JSON.stringify({ service: 'maicare-api-bridge' }));
     return;
   }
-  const isChat = url.startsWith('/ai/');
-  if (!isChat && !djangoPrefixes.some(prefix => url.startsWith(prefix))) {
+  if (!djangoPrefixes.some(prefix => url.startsWith(prefix))) {
     response.writeHead(404, { ...corsHeaders, 'Content-Type': 'application/json' });
     response.end(JSON.stringify({ detail: 'Path is not available through the development bridge.' }));
     return;
   }
-  const target = isChat ? chatTarget : djangoTarget;
-  const upstreamPath = isChat ? url.slice(3) : url;
+  const target = djangoTarget;
+  const upstreamPath = url;
   const headers = {};
   for (const [name, value] of Object.entries(request.headers)) {
     if (!hopByHop.has(name) && name !== 'origin' && value !== undefined) headers[name] = value;

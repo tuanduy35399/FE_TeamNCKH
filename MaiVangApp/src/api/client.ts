@@ -1,4 +1,4 @@
-import { AUTH_API_BASE_URL, AUTH_TIMEOUT_MS, CHAT_API_BASE_URL } from './config';
+import { API_BASE_URL, AUTH_TIMEOUT_MS } from './config';
 import { ApiError, apiMessage, fieldErrorsFromPayload } from './errors';
 import type { Session } from '../types/domain';
 import { AUTH_ENDPOINTS } from './endpoints';
@@ -33,12 +33,12 @@ async function refreshAccessToken(): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
   try {
-    const response = await fetch(`${AUTH_API_BASE_URL}${AUTH_ENDPOINTS.refresh}`, {
+    const response = await fetch(`${API_BASE_URL}${AUTH_ENDPOINTS.refresh}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh: session.refreshToken }), signal: controller.signal,
     });
     const payload = await parseResponse(response) as { access?: unknown; refresh?: unknown } | null;
     if (!response.ok || typeof payload?.access !== 'string') throw new ApiError('Phiên đăng nhập đã hết hạn.', 401);
-    const next = { accessToken: payload.access, refreshToken: typeof payload.refresh === 'string' ? payload.refresh : session.refreshToken };
+    const next = { ...session, accessToken: payload.access, refreshToken: typeof payload.refresh === 'string' ? payload.refresh : session.refreshToken };
     await hooks?.updateSession(next);
     return next.accessToken;
   } catch (error) {
@@ -47,11 +47,12 @@ async function refreshAccessToken(): Promise<string> {
     throw new ApiError('Không thể kết nối. Kiểm tra mạng rồi thử lại.', undefined, undefined, 'network');
   } finally { clearTimeout(timeout); }
 }
-type ApiRequestOptions = RequestInit & { auth?: boolean; timeoutMs?: number; retryAuth?: boolean; service?: 'auth' | 'chat' };
+type ApiRequestOptions = RequestInit & { auth?: boolean; timeoutMs?: number; retryAuth?: boolean };
+const RETRYABLE_GET_STATUSES = new Set([502, 503, 504]);
+const retryDelay = (attempt: number) => new Promise(resolve => setTimeout(resolve, attempt * 900));
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? AUTH_TIMEOUT_MS);
-  const baseUrl = options.service === 'chat' ? CHAT_API_BASE_URL : AUTH_API_BASE_URL;
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   if (options.auth) {
@@ -59,18 +60,27 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     if (access) headers.set('Authorization', `Bearer ${access}`);
   }
   try {
-    const { auth: _auth, retryAuth: _retryAuth, timeoutMs: _timeoutMs, service: _service, ...fetchOptions } = options;
-    let response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+    const { auth: _auth, retryAuth: _retryAuth, timeoutMs: _timeoutMs, ...fetchOptions } = options;
+    let response = await fetch(`${API_BASE_URL}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+    const method = (fetchOptions.method || 'GET').toUpperCase();
+    for (let attempt = 1; method === 'GET' && RETRYABLE_GET_STATUSES.has(response.status) && attempt <= 2; attempt += 1) {
+      await retryDelay(attempt);
+      response = await fetch(`${API_BASE_URL}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+    }
     if (response.status === 401 && options.auth && options.retryAuth !== false && hooks) {
       try {
         refreshPromise ||= refreshAccessToken().finally(() => { refreshPromise = null; });
         headers.set('Authorization', `Bearer ${await refreshPromise}`);
-        response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+        response = await fetch(`${API_BASE_URL}${path}`, { ...fetchOptions, headers, signal: controller.signal });
       } catch (error) {
         if (error instanceof ApiError && (error.kind === 'network' || error.kind === 'timeout')) throw error;
         await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
       }
+    }
+    if (response.status === 401 && options.auth && hooks) {
+      await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
     }
     const payload = await parseResponse(response);
     if (!response.ok) {
