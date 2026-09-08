@@ -15,6 +15,9 @@ export type LocalImageHistory = {
   description?: string;
   detections: Detection[];
   createdAt: string;
+  userMessageId?: number;
+  assistantMessageId?: number;
+  turnKey?: string;
   storedImageUri?: string;
   imageUri?: string;
   transientImageUri?: boolean;
@@ -23,6 +26,9 @@ export type LocalImageHistory = {
 function metadataKey(userId: number) { return `${META_PREFIX}:${userId}`; }
 function nativeDirectory(userId: number) { return `${FileSystem.documentDirectory}maicare-history-v${VERSION}/${userId}/`; }
 function nativeMetadataPath(userId: number) { return `${nativeDirectory(userId)}metadata.json`; }
+function imageKey(record: Pick<LocalImageHistory, 'userId' | 'conversationId' | 'turnKey'>) {
+  return `${record.userId}:${record.conversationId}${record.turnKey ? `:${record.turnKey}` : ''}`;
+}
 
 function validRecords(value: unknown, userId: number): LocalImageHistory[] {
   if (!Array.isArray(value)) return [];
@@ -105,8 +111,10 @@ function extensionFor(image: SelectedImage) {
 
 export async function saveLocalImageHistory(input: {
   userId: number; conversationId: number; title: string; description?: string; detections: Detection[]; image: SelectedImage;
+  userMessageId?: number; assistantMessageId?: number;
 }) {
-  const key = `${input.userId}:${input.conversationId}`;
+  const turnKey = String(input.assistantMessageId ?? input.userMessageId ?? Date.now());
+  const key = `${input.userId}:${input.conversationId}:${turnKey}`;
   let storedImageUri: string | undefined;
   if (Platform.OS === 'web') {
     const blob = input.image.file || await (await fetch(input.image.uri)).blob();
@@ -114,33 +122,42 @@ export async function saveLocalImageHistory(input: {
   } else {
     const directory = nativeDirectory(input.userId);
     await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
-    storedImageUri = `${directory}${input.conversationId}.${extensionFor(input.image)}`;
+    storedImageUri = `${directory}${input.conversationId}-${turnKey}.${extensionFor(input.image)}`;
     await FileSystem.copyAsync({ from: input.image.uri, to: storedImageUri });
   }
   const record: LocalImageHistory = {
     version: VERSION, userId: input.userId, conversationId: input.conversationId, title: input.title,
     description: input.description, detections: input.detections, createdAt: new Date().toISOString(), storedImageUri,
+    userMessageId: input.userMessageId, assistantMessageId: input.assistantMessageId, turnKey,
   };
   const records = await readMetadata(input.userId);
-  await writeMetadata(input.userId, [...records.filter(item => item.conversationId !== input.conversationId), record]);
+  await writeMetadata(input.userId, [...records.filter(item => !(item.conversationId === input.conversationId && item.turnKey === turnKey)), record]);
 }
 
 export async function getLocalImageHistory(userId: number): Promise<LocalImageHistory[]> { return readMetadata(userId); }
 
 export async function getLocalImageHistoryItem(userId: number, conversationId: number): Promise<LocalImageHistory | undefined> {
-  const record = (await readMetadata(userId)).find(item => item.conversationId === conversationId);
-  if (!record) return undefined;
-  if (Platform.OS !== 'web') return { ...record, imageUri: record.storedImageUri };
-  try {
-    const blob = await getWebImage(`${userId}:${conversationId}`);
-    return blob ? { ...record, imageUri: URL.createObjectURL(blob), transientImageUri: true } : record;
-  } catch { return record; }
+  return (await getLocalImageHistoryItems(userId, conversationId)).at(-1);
+}
+
+export async function getLocalImageHistoryItems(userId: number, conversationId: number): Promise<LocalImageHistory[]> {
+  const records = (await readMetadata(userId)).filter(item => item.conversationId === conversationId);
+  if (Platform.OS !== 'web') return records.map(record => ({ ...record, imageUri: record.storedImageUri }));
+  return Promise.all(records.map(async record => {
+    try {
+      const blob = await getWebImage(imageKey(record)) || (!record.turnKey ? await getWebImage(`${userId}:${conversationId}`) : undefined);
+      return blob ? { ...record, imageUri: URL.createObjectURL(blob), transientImageUri: true } : record;
+    } catch { return record; }
+  }));
 }
 
 export async function clearLocalImageHistoryForUser(userId: number) {
   const records = await readMetadata(userId);
   if (Platform.OS === 'web') {
-    await Promise.all(records.map(record => deleteWebImage(`${userId}:${record.conversationId}`).catch(() => undefined)));
+    await Promise.all(records.flatMap(record => [
+      deleteWebImage(imageKey(record)).catch(() => undefined),
+      deleteWebImage(`${userId}:${record.conversationId}`).catch(() => undefined),
+    ]));
     globalThis.localStorage?.removeItem(metadataKey(userId));
     return;
   }

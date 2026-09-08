@@ -4,6 +4,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -26,9 +28,10 @@ import { ApiError } from "../../api/errors";
 import { useAuth } from "../../auth/AuthProvider";
 import { AssistantContent } from "../../components/AssistantContent";
 import {
-  getLocalImageHistoryItem,
+  getLocalImageHistoryItems,
   saveLocalImageHistory,
 } from "../../history/imageHistory";
+import { mergeLocalImageTurns } from "../../history/imageHistoryMerge";
 import { loadActiveHistoryId, saveActiveHistoryId } from "../../chat/storage";
 import {
   followUpSuggestions,
@@ -150,6 +153,7 @@ export function ChatScreen({ navigation, route }: Props) {
   const sendRef = useRef<View>(null);
   const diagnosisRef = useRef<View>(null);
   const newChatRef = useRef<View>(null);
+  const diagnosisPulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const cleanups = [
       registerTarget("messageArea", { ref: messageAreaRef }),
@@ -160,6 +164,21 @@ export function ChatScreen({ navigation, route }: Props) {
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
   }, [registerTarget]);
+  useEffect(() => {
+    if (diagnosisMode || sending) {
+      diagnosisPulse.stopAnimation();
+      diagnosisPulse.setValue(1);
+      return;
+    }
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(diagnosisPulse, { toValue: 1.018, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(diagnosisPulse, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [diagnosisMode, sending, diagnosisPulse]);
 
   function beginGeneration() {
     generation.current += 1;
@@ -181,16 +200,10 @@ export function ChatScreen({ navigation, route }: Props) {
     try {
       const detail = await getHistoryDetail(id);
       const metadata = account?.id
-        ? await getLocalImageHistoryItem(account.id, id)
-        : undefined;
+        ? await getLocalImageHistoryItems(account.id, id)
+        : [];
       if (token !== generation.current) return;
-      const next = metadata?.imageUri
-        ? attachImageResult(
-            detail.messages || [],
-            { uri: metadata.imageUri, name: "history-image.jpg" },
-            metadata.detections,
-          )
-        : detail.messages || [];
+      const next = mergeLocalImageTurns(detail.messages || [], metadata);
       setHistoryId(detail.id);
       setHistoryTitle(detail.title || "Cuộc trò chuyện");
       setMessages(next);
@@ -375,8 +388,9 @@ export function ChatScreen({ navigation, route }: Props) {
       const detections = selected
         ? normalizeDetections(response.detections)
         : undefined;
+      let reconciledMessages: ChatMessage[] | undefined;
       try {
-        await reconcile(targetId, selected, detections);
+        reconciledMessages = await reconcile(targetId, selected, detections);
       } catch {
         setMessages((current) =>
           current.concat({
@@ -397,10 +411,13 @@ export function ChatScreen({ navigation, route }: Props) {
           description: question || undefined,
           detections: detections || [],
           image: selected,
+          userMessageId: [...(reconciledMessages || [])].reverse().find(message => message.role === "user")?.id,
+          assistantMessageId: [...(reconciledMessages || [])].reverse().find(message => message.role === "assistant")?.id,
         }).catch(() => undefined);
       if (selected) {
         setText("");
         setImage(imageAfterRequest(selected, "success"));
+        setDiagnosisMode(false);
         await cleanupNormalizedImage(selected);
       }
       setFailed(undefined);
@@ -504,9 +521,12 @@ export function ChatScreen({ navigation, route }: Props) {
             <Text numberOfLines={1} style={styles.brandTitle}>
               MaiCare AI
             </Text>
-            <Text numberOfLines={1} style={styles.brandSubtitle}>
-              {historyId ? historyTitle : "Sẵn sàng hỗ trợ mai vàng"}
-            </Text>
+            <View style={styles.statusRow}>
+              {!historyId ? <View accessibilityLabel="Sẵn sàng hỗ trợ" style={styles.statusDot} /> : null}
+              <Text numberOfLines={1} style={styles.brandSubtitle}>
+                {historyId ? historyTitle : "Trợ lý chăm sóc mai vàng"}
+              </Text>
+            </View>
           </View>
           <View
             ref={newChatRef}
@@ -574,6 +594,7 @@ export function ChatScreen({ navigation, route }: Props) {
               ListEmptyComponent={<Welcome onSelect={setText} />}
               renderItem={({ item, index }) => (
                 <MessageBubble
+                  busy={sending}
                   message={item}
                   sourceQuestion={
                     item.sourceQuestion ||
@@ -640,12 +661,13 @@ export function ChatScreen({ navigation, route }: Props) {
                 />
                 <View style={styles.previewActions}>
                   <Pressable
+                    accessibilityLabel="Đổi ảnh chẩn đoán"
                     onPress={() => setSheetOpen(true)}
                     style={styles.smallAction}
                   >
                     <Text style={styles.smallActionText}>Đổi ảnh</Text>
                   </Pressable>
-                  <Pressable onPress={removeImage} style={styles.smallAction}>
+                  <Pressable accessibilityLabel="Xóa ảnh chẩn đoán" onPress={removeImage} style={styles.smallAction}>
                     <Text
                       style={[styles.smallActionText, { color: colors.danger }]}
                     >
@@ -656,6 +678,7 @@ export function ChatScreen({ navigation, route }: Props) {
               </View>
             ) : (
               <Pressable
+                accessibilityLabel="Chọn ảnh chẩn đoán"
                 testID="add-image"
                 onPress={() => setSheetOpen(true)}
                 style={styles.addImage}
@@ -675,12 +698,14 @@ export function ChatScreen({ navigation, route }: Props) {
           </View>
         )}
         <View style={styles.composer}>
-          <View
-            ref={diagnosisRef}
-            testID="tutorial-target-diagnosis"
-            collapsable={false}
-            style={styles.targetWrap}
-          >
+          {!diagnosisMode && (
+            <Animated.View style={{ transform: [{ scale: diagnosisPulse }] }}>
+              <View
+                ref={diagnosisRef}
+                testID="tutorial-target-diagnosis"
+                collapsable={false}
+                style={styles.targetWrap}
+              >
             <Pressable
               testID="diagnosis-toggle"
               accessibilityRole="button"
@@ -690,26 +715,25 @@ export function ChatScreen({ navigation, route }: Props) {
                 setDiagnosisMode((value) => !value);
                 if (!diagnosisMode) setSheetOpen(true);
               }}
-              style={[
+              style={({ pressed }) => [
                 styles.diagnosisButton,
-                diagnosisMode && styles.diagnosisActive,
+                pressed && styles.diagnosisPressed,
               ]}
             >
               <Ionicons
                 name="camera"
                 size={20}
-                color={diagnosisMode ? "#fff" : colors.primaryDark}
+                color="#fff"
               />
               <Text
-                style={[
-                  styles.diagnosisLabel,
-                  diagnosisMode && styles.diagnosisLabelActive,
-                ]}
+                style={styles.diagnosisLabel}
               >
                 Chẩn đoán ảnh
               </Text>
-            </Pressable>
-          </View>
+                </Pressable>
+              </View>
+            </Animated.View>
+          )}
           <View
             ref={composerRef}
             testID="tutorial-target-composer"
@@ -783,7 +807,7 @@ function Welcome({ onSelect }: { onSelect: (value: string) => void }) {
       </View>
       <Text style={styles.welcomeTitle}>Trợ lý chăm sóc mai vàng</Text>
       <Text style={styles.welcomeText}>
-        Hỏi về triệu chứng, chăm sóc hoặc bật Chẩn đoán khi bạn muốn gửi ảnh.
+        Hỏi về triệu chứng, chăm sóc hoặc dùng camera để chẩn đoán qua ảnh.
       </Text>
       <View style={styles.welcomeChips}>
         {welcomePrompts.map((item) => (
@@ -800,10 +824,12 @@ function Welcome({ onSelect }: { onSelect: (value: string) => void }) {
   );
 }
 function MessageBubble({
+  busy,
   message,
   sourceQuestion,
   onSuggestion,
 }: {
+  busy: boolean;
   message: ChatMessage;
   sourceQuestion: string;
   onSuggestion: (prompt: string) => void;
@@ -882,8 +908,10 @@ function MessageBubble({
               {prompts.map((prompt) => (
                 <Pressable
                   key={prompt}
+                  accessibilityLabel={`Hỏi tiếp: ${prompt}`}
+                  disabled={busy}
                   onPress={() => onSuggestion(prompt)}
-                  style={styles.followUpChip}
+                  style={[styles.followUpChip, busy && styles.followUpDisabled]}
                 >
                   <Text style={styles.followUpText}>{prompt}</Text>
                 </Pressable>
@@ -962,8 +990,20 @@ const styles = StyleSheet.create({
   brandSubtitle: {
     color: colors.muted,
     fontSize: 11,
-    marginTop: 2,
     maxWidth: "100%",
+  },
+  statusRow: {
+    maxWidth: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 2,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#3FA66B",
   },
   center: {
     flex: 1,
@@ -1072,6 +1112,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.primarySoft,
   },
+  followUpDisabled: { opacity: 0.45 },
   followUpText: { color: colors.primaryDark, fontSize: 12, lineHeight: 17 },
   typing: {
     flexDirection: "row",
@@ -1167,23 +1208,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#9BC7A9",
-    backgroundColor: colors.accentSoft,
+    borderColor: "#83BE99",
+    backgroundColor: colors.primary,
     shadowColor: "#143725",
     shadowOpacity: 0.12,
     shadowRadius: 5,
     elevation: 2,
   },
-  diagnosisActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
+  diagnosisPressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
   diagnosisLabel: {
-    color: colors.primaryDark,
+    color: "#fff",
     fontSize: 14,
     fontWeight: "900",
   },
-  diagnosisLabelActive: { color: "#fff" },
   inputShell: {
     flexDirection: "row",
     alignItems: "flex-end",

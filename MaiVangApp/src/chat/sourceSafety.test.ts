@@ -33,6 +33,8 @@ test('legacy floating gear is absent and debug logging cannot include auth secre
 test('release configuration defaults to the deployed Django API only', () => {
   const config = readFileSync(path.join(process.cwd(), 'src', 'api', 'config.ts'), 'utf8');
   assert.match(config, /https:\/\/chat-bot-maivang-backend\.onrender\.com/);
+  const timeout = Number(config.match(/IMAGE_TIMEOUT_MS\s*=\s*([\d_]+)/)?.[1]?.replaceAll('_', ''));
+  assert.ok(timeout >= 120_000 && timeout <= 180_000);
   assert.doesNotMatch(config, /chat-service-nckh|\/chat\/image/);
 });
 
@@ -46,8 +48,11 @@ test('history route opening cannot race session restore or use a list index', ()
 
 test('final diagnosis entry is one accessible camera pill with no scan icon or fake bbox', () => {
   const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
+  const sourceSheet = readFileSync(path.join(process.cwd(), 'src', 'screens', 'diagnosis', 'ImageSourceSheet.tsx'), 'utf8');
   assert.equal(chat.includes('accessibilityLabel="Chẩn đoán bằng ảnh"'), true);
   assert.match(chat, /name="camera"/);
+  assert.match(sourceSheet, /testID="camera-option"/);
+  assert.match(sourceSheet, /testID="library-option"/);
   assert.match(chat, /minHeight: 46/);
   assert.doesNotMatch(chat, /scan-outline/);
   assert.equal((chat.match(/testID="diagnosis-toggle"/g) || []).length, 1);

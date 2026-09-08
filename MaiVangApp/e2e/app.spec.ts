@@ -66,7 +66,9 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
     await expect(page.getByTestId('selected-image')).toHaveCount(0);
     await expect(diagnosisInput).toHaveValue('');
   }
-  await page.getByTestId('diagnosis-toggle').click();
+  if (await page.getByLabel('Tắt chẩn đoán').isVisible().catch(() => false)) {
+    await page.getByLabel('Tắt chẩn đoán').click();
+  }
   await page.getByPlaceholder('Nhắn tin cho MaiCare...').fill('Tôi nên xử lý bước đầu thế nào?'); await page.getByTestId('chat-send').click(); await waitForAnswerOrServiceError(1);
 
   await page.reload(); await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 45_000 }); await expect(page.getByText('Tôi nên xử lý bước đầu thế nào?')).toBeVisible({ timeout: 45_000 });
@@ -77,7 +79,7 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
 
   await page.getByRole('tab', { name: /Tài khoản/ }).click();
   await page.getByTestId('replay-tutorial').click();
-  for (const [index, title] of ['Trợ lý MaiCare AI', 'Đặt câu hỏi', 'Gửi cho MaiCare', 'Chẩn đoán ảnh', 'Lịch sử trò chuyện', 'Tạo cuộc trò chuyện mới', 'Tài khoản & hướng dẫn'].entries()) {
+  for (const [index, title] of ['Trợ lý MaiCare AI', 'Đặt câu hỏi', 'Gửi cho MaiCare', 'Chẩn đoán bằng ảnh', 'Lịch sử trò chuyện', 'Tạo cuộc trò chuyện mới', 'Tài khoản & hướng dẫn'].entries()) {
     await expect(page.getByText(title, { exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(`${index + 1} / 7`, { exact: true })).toBeVisible();
     await page.getByTestId('tutorial-next').click();
