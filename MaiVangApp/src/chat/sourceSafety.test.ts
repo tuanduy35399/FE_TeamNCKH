@@ -39,7 +39,17 @@ test('release configuration defaults to the deployed Django API only', () => {
 test('history route opening cannot race session restore or use a list index', () => {
   const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
   const routeBlock = chat.slice(chat.indexOf('const requested = route.params?.historyId'), chat.indexOf('}, [route.params?.historyId'));
-  assert.match(routeBlock, /restored\.current = true; void openHistory\(requested\)/);
+  assert.match(routeBlock, /restored\.current = true;\s+void openHistory\(requested\)/);
   assert.doesNotMatch(routeBlock, /navigation\.setParams/);
   assert.match(chat, /setHistoryId\(detail\.id\)/);
+});
+
+test('final diagnosis entry is one accessible camera pill with no scan icon or fake bbox', () => {
+  const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
+  assert.equal(chat.includes('accessibilityLabel="Chẩn đoán bằng ảnh"'), true);
+  assert.match(chat, /name="camera"/);
+  assert.match(chat, /minHeight: 46/);
+  assert.doesNotMatch(chat, /scan-outline/);
+  assert.equal((chat.match(/testID="diagnosis-toggle"/g) || []).length, 1);
+  assert.doesNotMatch(chat, /bbox|xyxy|x1|y1|x2|y2/);
 });

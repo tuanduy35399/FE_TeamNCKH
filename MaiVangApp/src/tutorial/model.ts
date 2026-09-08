@@ -3,7 +3,7 @@ export const tutorialSteps: Array<{ target: TutorialTargetName; title: string; t
   { target: 'messageArea', title: 'Trợ lý MaiCare AI', text: 'Đặt câu hỏi về triệu chứng, chăm sóc và bệnh trên cây mai vàng. Câu trả lời được lưu theo từng cuộc trò chuyện.' },
   { target: 'composer', title: 'Đặt câu hỏi', text: 'Nhập câu hỏi hoặc mô tả triệu chứng của cây. Bạn có thể tiếp tục hỏi trong cùng một cuộc trò chuyện để giữ ngữ cảnh.' },
   { target: 'send', title: 'Gửi cho MaiCare', text: 'Nhấn để gửi câu hỏi. Khi AI đang xử lý, ứng dụng sẽ hiển thị trạng thái chờ và ngăn gửi trùng.' },
-  { target: 'diagnosis', title: 'Chẩn đoán bằng ảnh', text: 'Chụp ảnh hoặc chọn ảnh lá/cây từ thư viện để hệ thống nhận diện dấu hiệu bệnh.' },
+  { target: 'diagnosis', title: 'Chẩn đoán ảnh', text: 'Nhấn nút camera “Chẩn đoán ảnh”, rồi chụp hoặc chọn ảnh lá/cây từ thư viện.' },
   { target: 'history', title: 'Lịch sử trò chuyện', text: 'Xem lại các cuộc trò chuyện trước đây và tiếp tục hỏi trong đúng phiên cũ.' },
   { target: 'newChat', title: 'Tạo cuộc trò chuyện mới', text: 'Bắt đầu một chủ đề mới mà không làm lẫn nội dung với phiên hiện tại.' },
   { target: 'account', title: 'Tài khoản & hướng dẫn', text: 'Quản lý tài khoản và mở lại hướng dẫn sử dụng bất cứ lúc nào.' },

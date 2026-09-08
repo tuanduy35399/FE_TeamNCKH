@@ -23,3 +23,9 @@ test('all seven spotlight targets are registered by name', () => {
   const registry = new TutorialTargetRegistry<object>(); const cleanups = tutorialSteps.map(step => registry.register(step.target, {}));
   assert.equal(tutorialSteps.length, 7); tutorialSteps.forEach(step => assert.equal(registry.has(step.target), true)); cleanups.forEach(cleanup => cleanup());
 });
+
+test('diagnosis spotlight describes the final camera pill', () => {
+  const step = tutorialSteps.find(value => value.target === 'diagnosis');
+  assert.match(step?.title || '', /Chẩn đoán ảnh/);
+  assert.match(step?.text || '', /camera.*Chẩn đoán ảnh/i);
+});

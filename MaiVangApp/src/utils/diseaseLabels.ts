@@ -9,6 +9,7 @@ const aliases: Record<string, string> = {
   'leaf spot': 'Đốm lá',
   'dom la': 'Đốm lá',
   healthy: 'Lá khỏe',
+  'healthy leaf': 'Lá khỏe',
   'la khoe': 'Lá khỏe',
 };
 

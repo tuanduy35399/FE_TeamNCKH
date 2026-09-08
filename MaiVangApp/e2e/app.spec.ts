@@ -51,7 +51,7 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   await expect(page.getByRole('button').filter({ hasText: 'Cách chăm mai sau Tết?' })).toHaveCount(1); await expect(page.getByRole('button').filter({ hasText: 'Khi nào nên bón phân cho mai?' })).toHaveCount(1);
 
   await page.getByRole('tab', { name: /Trò chuyện/ }).click(); await page.getByLabel('Cuộc trò chuyện mới').click(); await page.getByTestId('diagnosis-toggle').click();
-  await expect(page.getByTestId('add-image')).toBeVisible(); await page.getByTestId('add-image').click(); await expect(page.getByTestId('camera-option')).toBeVisible();
+  await expect(page.getByTestId('camera-option')).toBeVisible();
   const sampleImage = path.resolve(process.cwd(), '..', '..', 'reference', 'django-backend', 'diseases', '20260124_151321.jpg');
   const chooser = page.waitForEvent('filechooser'); await page.getByTestId('library-option').click(); await (await chooser).setFiles(sampleImage); await expect(page.getByTestId('selected-image')).toBeVisible();
   const diagnosisInput = page.getByPlaceholder('Thêm câu hỏi (không bắt buộc)...');
@@ -66,7 +66,8 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
     await expect(page.getByTestId('selected-image')).toHaveCount(0);
     await expect(diagnosisInput).toHaveValue('');
   }
-  await diagnosisInput.fill('Tôi nên xử lý bước đầu thế nào?'); await page.getByTestId('chat-send').click(); await waitForAnswerOrServiceError(1);
+  await page.getByTestId('diagnosis-toggle').click();
+  await page.getByPlaceholder('Nhắn tin cho MaiCare...').fill('Tôi nên xử lý bước đầu thế nào?'); await page.getByTestId('chat-send').click(); await waitForAnswerOrServiceError(1);
 
   await page.reload(); await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 45_000 }); await expect(page.getByText('Tôi nên xử lý bước đầu thế nào?')).toBeVisible({ timeout: 45_000 });
   await expect(page.getByTestId('tutorial-overlay')).toHaveCount(0);
@@ -76,7 +77,7 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
 
   await page.getByRole('tab', { name: /Tài khoản/ }).click();
   await page.getByTestId('replay-tutorial').click();
-  for (const [index, title] of ['Trợ lý MaiCare AI', 'Đặt câu hỏi', 'Gửi cho MaiCare', 'Chẩn đoán bằng ảnh', 'Lịch sử trò chuyện', 'Tạo cuộc trò chuyện mới', 'Tài khoản & hướng dẫn'].entries()) {
+  for (const [index, title] of ['Trợ lý MaiCare AI', 'Đặt câu hỏi', 'Gửi cho MaiCare', 'Chẩn đoán ảnh', 'Lịch sử trò chuyện', 'Tạo cuộc trò chuyện mới', 'Tài khoản & hướng dẫn'].entries()) {
     await expect(page.getByText(title, { exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(`${index + 1} / 7`, { exact: true })).toBeVisible();
     await page.getByTestId('tutorial-next').click();

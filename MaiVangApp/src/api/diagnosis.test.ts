@@ -165,6 +165,45 @@ test('HIST-04 and HIST-09 retain distinct sessions by ID and remove duplicate so
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test('History A and B remain isolated when each is reopened and continued', async () => {
+  const originalFetch = globalThis.fetch;
+  const histories = new Map([
+    [71, [
+      { id: 1, role: 'user', content: 'A1', created_at: timestamp },
+      { id: 2, role: 'assistant', content: 'assistant A1', created_at: timestamp },
+    ]],
+    [72, [
+      { id: 3, role: 'user', content: 'B1', created_at: timestamp },
+      { id: 4, role: 'assistant', content: 'assistant B1', created_at: timestamp },
+    ]],
+  ]);
+  globalThis.fetch = async (input, init) => {
+    const id = Number(String(input).match(/history\/(\d+)\//)?.[1]);
+    if ((init?.method || 'GET') === 'POST') {
+      const question = JSON.parse(String(init?.body)).question as string;
+      const list = histories.get(id)!;
+      list.push(
+        { id: list.length + 10, role: 'user', content: question, created_at: timestamp },
+        { id: list.length + 11, role: 'assistant', content: `assistant ${question}`, created_at: timestamp },
+      );
+      return new Response(JSON.stringify({ question, answer: `assistant ${question}`, history_id: id }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ ...historyDto(id, `History ${id}`), messages: histories.get(id) }), { status: 200 });
+  };
+  try {
+    assert.deepEqual((await getHistoryDetail(71)).messages?.map(value => value.content), ['A1', 'assistant A1']);
+    await submitDiagnosis({ text: 'A2', conversationId: 71 });
+    assert.deepEqual((await getHistoryDetail(72)).messages?.map(value => value.content), ['B1', 'assistant B1']);
+    await submitDiagnosis({ text: 'B2', conversationId: 72 });
+    const a = (await getHistoryDetail(71)).messages?.map(value => value.content) || [];
+    const b = (await getHistoryDetail(72)).messages?.map(value => value.content) || [];
+    assert.deepEqual(a, ['A1', 'assistant A1', 'A2', 'assistant A2']);
+    assert.equal(a.some(value => value.includes('B')), false);
+    assert.deepEqual(b, ['B1', 'assistant B1', 'B2', 'assistant B2']);
+    assert.equal(b.some(value => value.includes('A')), false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('native iOS file upload descriptor preserves URI, filename, MIME, and question', () => {
   assert.deepEqual(nativeImageDescriptor({ uri: 'file:///var/mobile/IMG_0230.jpg', name: 'IMG_0230.jpg', mimeType: 'image/jpeg' }, 'test diagnosis'), {
     uri: 'file:///var/mobile/IMG_0230.jpg', name: 'IMG_0230.jpg', mimeType: 'image/jpeg', parameters: { question: 'test diagnosis' },
