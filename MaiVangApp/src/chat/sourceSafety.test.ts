@@ -38,23 +38,29 @@ test('release configuration defaults to the deployed Django API only', () => {
   assert.doesNotMatch(config, /chat-service-nckh|\/chat\/image/);
 });
 
-test('history route opening cannot race session restore or use a list index', () => {
+test('one shared session store atomically loads history before navigation and guards stale responses', () => {
+  const provider = readFileSync(path.join(process.cwd(), 'src', 'chat', 'ChatSessionProvider.tsx'), 'utf8');
+  const history = readFileSync(path.join(process.cwd(), 'src', 'screens', 'history', 'HistoryScreen.tsx'), 'utf8');
   const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
-  const routeBlock = chat.slice(chat.indexOf('const requested = route.params?.historyId'), chat.indexOf('}, [route.params?.historyId'));
-  assert.match(routeBlock, /restored\.current = true;\s+void openHistory\(requested\)/);
-  assert.doesNotMatch(routeBlock, /navigation\.setParams/);
-  assert.match(chat, /setHistoryId\(detail\.id\)/);
+  assert.match(provider, /detail\.id !== id/);
+  assert.match(provider, /!isCurrentGeneration\(token\)/);
+  assert.match(provider, /setCurrentHistoryId\(detail\.id\)[\s\S]*setMessages\(mergeLocalImageTurns/);
+  assert.match(history, /const opened = await openHistory\(item\.id\)[\s\S]*if \(opened\) navigation\.navigate\('Chat'\)/);
+  assert.doesNotMatch(chat, /route\.params|setMessages\(\[\]\).*focus/);
 });
 
-test('final diagnosis entry is one accessible camera pill with no scan icon or fake bbox', () => {
+test('final diagnosis entry is one draggable camera speed dial with no fake bbox', () => {
   const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
+  const fab = readFileSync(path.join(process.cwd(), 'src', 'components', 'FloatingCameraFab.tsx'), 'utf8');
   const sourceSheet = readFileSync(path.join(process.cwd(), 'src', 'screens', 'diagnosis', 'ImageSourceSheet.tsx'), 'utf8');
-  assert.equal(chat.includes('accessibilityLabel="Chẩn đoán bằng ảnh"'), true);
-  assert.match(chat, /name="camera"/);
+  assert.match(fab, /PanResponder\.create/);
+  assert.match(fab, /DRAG_THRESHOLD/);
+  assert.match(fab, /camera-speed-dial/);
+  assert.match(fab, /Mẹo chụp ảnh rõ/);
+  assert.match(fab, /Chọn từ thư viện/);
+  assert.match(fab, /Chụp ảnh/);
   assert.match(sourceSheet, /testID="camera-option"/);
   assert.match(sourceSheet, /testID="library-option"/);
-  assert.match(chat, /minHeight: 46/);
-  assert.doesNotMatch(chat, /scan-outline/);
-  assert.equal((chat.match(/testID="diagnosis-toggle"/g) || []).length, 1);
-  assert.doesNotMatch(chat, /bbox|xyxy|x1|y1|x2|y2/);
+  assert.doesNotMatch(chat + fab, /scan-outline/);
+  assert.doesNotMatch(chat + fab, /bbox|xyxy|x1|y1|x2|y2/);
 });

@@ -4,10 +4,9 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
-  Easing,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -27,12 +26,10 @@ import {
 import { ApiError } from "../../api/errors";
 import { useAuth } from "../../auth/AuthProvider";
 import { AssistantContent } from "../../components/AssistantContent";
-import {
-  getLocalImageHistoryItems,
-  saveLocalImageHistory,
-} from "../../history/imageHistory";
-import { mergeLocalImageTurns } from "../../history/imageHistoryMerge";
-import { loadActiveHistoryId, saveActiveHistoryId } from "../../chat/storage";
+import { saveLocalImageHistory } from "../../history/imageHistory";
+import { saveActiveHistoryId } from "../../chat/storage";
+import { useChatSession } from "../../chat/ChatSessionProvider";
+import { FloatingCameraFab } from "../../components/FloatingCameraFab";
 import {
   followUpSuggestions,
   isWeakContextAnswer,
@@ -124,12 +121,15 @@ function attachImageResult(
   );
 }
 
-export function ChatScreen({ navigation, route }: Props) {
+export function ChatScreen({ navigation }: Props) {
   const { account } = useAuth();
   const { registerTarget } = useTutorial();
-  const [historyId, setHistoryId] = useState<number | null>(null);
-  const [historyTitle, setHistoryTitle] = useState("Cuộc trò chuyện mới");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const {
+    currentHistoryId: historyId, historyTitle, messages, loadingHistory: loading,
+    historyLoadError, historyLoadTarget, setCurrentHistoryId: setHistoryId,
+    setHistoryTitle, setMessages, openHistory, newChat: resetSession,
+    beginGeneration: beginSessionGeneration, isCurrentGeneration,
+  } = useChatSession();
   const [text, setText] = useState("");
   const [diagnosisMode, setDiagnosisMode] = useState(false);
   const [image, setImage] = useState<SelectedImage>();
@@ -137,23 +137,18 @@ export function ChatScreen({ navigation, route }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [pickerError, setPickerError] = useState("");
   const [openSettings, setOpenSettings] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [historyLoadError, setHistoryLoadError] = useState("");
-  const [historyLoadTarget, setHistoryLoadTarget] = useState<number>();
   const [sending, setSending] = useState(false);
   const [uploadStage, setUploadStage] = useState<UploadStage>();
   const [failed, setFailed] = useState<FailedRequestState>();
-  const generation = useRef(0);
   const sendLocked = useRef(false);
-  const restored = useRef(false);
-  const lastRouteOpen = useRef<string | undefined>(undefined);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const messageAreaRef = useRef<View>(null);
   const composerRef = useRef<View>(null);
   const sendRef = useRef<View>(null);
   const diagnosisRef = useRef<View>(null);
   const newChatRef = useRef<View>(null);
-  const diagnosisPulse = useRef(new Animated.Value(1)).current;
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(64);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
     const cleanups = [
       registerTarget("messageArea", { ref: messageAreaRef }),
@@ -164,97 +159,28 @@ export function ChatScreen({ navigation, route }: Props) {
     ];
     return () => cleanups.forEach((cleanup) => cleanup());
   }, [registerTarget]);
-  useEffect(() => {
-    if (diagnosisMode || sending) {
-      diagnosisPulse.stopAnimation();
-      diagnosisPulse.setValue(1);
-      return;
-    }
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(diagnosisPulse, { toValue: 1.018, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(diagnosisPulse, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [diagnosisMode, sending, diagnosisPulse]);
 
   function beginGeneration() {
-    generation.current += 1;
+    const token = beginSessionGeneration();
     releaseSubmissionLock(sendLocked);
     setSending(false);
     setUploadStage(undefined);
-    return generation.current;
-  }
-  async function openHistory(id: number) {
-    const token = beginGeneration();
-    setLoading(true);
-    setHistoryId(null);
-    setHistoryTitle("Đang tải cuộc trò chuyện...");
-    setHistoryLoadError("");
-    setHistoryLoadTarget(id);
-    setFailed(undefined);
-    setImage(undefined);
-    setDiagnosisMode(false);
-    try {
-      const detail = await getHistoryDetail(id);
-      const metadata = account?.id
-        ? await getLocalImageHistoryItems(account.id, id)
-        : [];
-      if (token !== generation.current) return;
-      const next = mergeLocalImageTurns(detail.messages || [], metadata);
-      setHistoryId(detail.id);
-      setHistoryTitle(detail.title || "Cuộc trò chuyện");
-      setMessages(next);
-      if (account?.id) await saveActiveHistoryId(account.id, detail.id);
-    } catch (value) {
-      if (token !== generation.current) return;
-      if (value instanceof ApiError && value.status === 404) {
-        setHistoryId(null);
-        setMessages([]);
-        setHistoryTitle("Cuộc trò chuyện mới");
-        if (account?.id) await saveActiveHistoryId(account.id, null);
-        setFailed(undefined);
-      } else {
-        setMessages([]);
-        setHistoryLoadError(
-          "Không thể tải cuộc trò chuyện này. Vui lòng thử lại.",
-        );
-      }
-    } finally {
-      if (token === generation.current) setLoading(false);
-    }
+    return token;
   }
   useEffect(() => {
-    const requested = route.params?.historyId;
-    if (!requested) return;
-    const routeKey = `${requested}:${route.params?.openKey || 0}`;
-    if (lastRouteOpen.current === routeKey) return;
-    lastRouteOpen.current = routeKey;
-    restored.current = true;
-    void openHistory(requested);
-  }, [route.params?.historyId, route.params?.openKey]);
-  useEffect(() => {
-    if (restored.current || !account?.id || route.params?.historyId) return;
-    restored.current = true;
-    void loadActiveHistoryId(account.id).then((id) => {
-      if (id) void openHistory(id);
-    });
-  }, [account?.id]);
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   function newChat() {
-    beginGeneration();
-    setHistoryId(null);
-    setHistoryTitle("Cuộc trò chuyện mới");
-    setMessages([]);
+    resetSession();
+    releaseSubmissionLock(sendLocked);
+    setSending(false);
+    setUploadStage(undefined);
     setText("");
     setImage(undefined);
     setDiagnosisMode(false);
     setFailed(undefined);
-    setHistoryLoadError("");
-    setHistoryLoadTarget(undefined);
-    setLoading(false);
-    if (account?.id) void saveActiveHistoryId(account.id, null);
   }
 
   async function prepare(asset: ImagePicker.ImagePickerAsset) {
@@ -341,7 +267,7 @@ export function ChatScreen({ navigation, route }: Props) {
     );
     const question = captured.submittedText;
     if ((!question && !selected) || !acquireSubmissionLock(sendLocked)) return;
-    const token = generation.current;
+    const token = beginSessionGeneration();
     const optimistic: ChatMessage = {
       id: -Date.now(),
       role: "user",
@@ -356,24 +282,24 @@ export function ChatScreen({ navigation, route }: Props) {
     setUploadStage(selected ? "uploading" : undefined);
     const stageTimer = selected
       ? setTimeout(() => {
-          if (token === generation.current) setUploadStage("analyzing");
+          if (isCurrentGeneration(token)) setUploadStage("analyzing");
         }, 900)
       : undefined;
     let targetId = forcedHistoryId || historyId;
     try {
       if (!targetId) {
         const created = await createHistory(titleFor(question, !!selected));
-        if (token !== generation.current) return;
+        if (!isCurrentGeneration(token)) return;
         targetId = created.id;
         setHistoryId(targetId);
         setHistoryTitle(created.title);
         if (account?.id) await saveActiveHistoryId(account.id, targetId);
       }
-      if (token !== generation.current) return;
+      if (!isCurrentGeneration(token)) return;
       const response = selected
         ? await sendHistoryImage(targetId, selected, question || undefined)
         : await sendHistoryText(targetId, question);
-      if (token !== generation.current) return;
+      if (!isCurrentGeneration(token)) return;
       if (
         Number(response.history_id) !== targetId ||
         typeof response.answer !== "string" ||
@@ -422,7 +348,7 @@ export function ChatScreen({ navigation, route }: Props) {
       }
       setFailed(undefined);
     } catch (value) {
-      if (token !== generation.current) return;
+      if (!isCurrentGeneration(token)) return;
       const error =
         value instanceof ApiError
           ? value
@@ -454,7 +380,7 @@ export function ChatScreen({ navigation, route }: Props) {
       );
     } finally {
       if (stageTimer) clearTimeout(stageTimer);
-      if (token === generation.current) {
+      if (isCurrentGeneration(token)) {
         releaseSubmissionLock(sendLocked);
         setSending(false);
         setUploadStage(undefined);
@@ -609,6 +535,7 @@ export function ChatScreen({ navigation, route }: Props) {
             />
           )}
         </View>
+        <View onLayout={event => setBottomPanelHeight(event.nativeEvent.layout.height)}>
         {sending && (
           <View style={styles.typing}>
             <ActivityIndicator size="small" color={colors.primary} />
@@ -698,42 +625,6 @@ export function ChatScreen({ navigation, route }: Props) {
           </View>
         )}
         <View style={styles.composer}>
-          {!diagnosisMode && (
-            <Animated.View style={{ transform: [{ scale: diagnosisPulse }] }}>
-              <View
-                ref={diagnosisRef}
-                testID="tutorial-target-diagnosis"
-                collapsable={false}
-                style={styles.targetWrap}
-              >
-            <Pressable
-              testID="diagnosis-toggle"
-              accessibilityRole="button"
-              accessibilityLabel="Chẩn đoán bằng ảnh"
-              accessibilityState={{ selected: diagnosisMode }}
-              onPress={() => {
-                setDiagnosisMode((value) => !value);
-                if (!diagnosisMode) setSheetOpen(true);
-              }}
-              style={({ pressed }) => [
-                styles.diagnosisButton,
-                pressed && styles.diagnosisPressed,
-              ]}
-            >
-              <Ionicons
-                name="camera"
-                size={20}
-                color="#fff"
-              />
-              <Text
-                style={styles.diagnosisLabel}
-              >
-                Chẩn đoán ảnh
-              </Text>
-                </Pressable>
-              </View>
-            </Animated.View>
-          )}
           <View
             ref={composerRef}
             testID="tutorial-target-composer"
@@ -780,6 +671,14 @@ export function ChatScreen({ navigation, route }: Props) {
             </View>
           </View>
         </View>
+        </View>
+        {!diagnosisMode && !loading ? <FloatingCameraFab
+          bottomReserved={bottomPanelHeight}
+          keyboardVisible={keyboardVisible}
+          targetRef={diagnosisRef}
+          onCamera={() => { setDiagnosisMode(true); void takePhoto(); }}
+          onGallery={() => { setDiagnosisMode(true); void chooseGallery(); }}
+        /> : null}
       </KeyboardAvoidingView>
       <ImageSourceSheet
         visible={sheetOpen}
@@ -1198,28 +1097,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     gap: 8,
-  },
-  targetWrap: { alignSelf: "flex-start" },
-  diagnosisButton: {
-    minHeight: 46,
-    paddingHorizontal: 16,
-    borderRadius: radius.pill,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#83BE99",
-    backgroundColor: colors.primary,
-    shadowColor: "#143725",
-    shadowOpacity: 0.12,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  diagnosisPressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
-  diagnosisLabel: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "900",
   },
   inputShell: {
     flexDirection: "row",

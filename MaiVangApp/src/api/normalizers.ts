@@ -18,11 +18,14 @@ export function normalizeHistoryItem(value: unknown): HistoryItem {
   return { id: raw.id, title: raw.title, createdAt: raw.created_at, updatedAt: raw.updated_at };
 }
 function normalizeMessage(value: unknown): ChatMessage {
-  const raw = value && typeof value === 'object' ? value as Record<string, unknown> : {};
-  return { id: Number(raw.id), role: String(raw.role || ''), content: String(raw.content || ''), createdAt: String(raw.created_at || '') };
+  if (!value || typeof value !== 'object') throw new ApiError('Tin nhắn lịch sử không hợp lệ.', undefined, undefined, 'malformed');
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.id !== 'number' || (raw.role !== 'user' && raw.role !== 'assistant') || typeof raw.content !== 'string' || typeof raw.created_at !== 'string') throw new ApiError('Tin nhắn lịch sử không đầy đủ.', undefined, undefined, 'malformed');
+  return { id: raw.id, role: raw.role, content: raw.content, createdAt: raw.created_at };
 }
 export function normalizeHistoryDetail(value: unknown): HistoryItem {
   const item = normalizeHistoryItem(value);
   const messages = (value as { messages?: unknown }).messages;
-  return { ...item, messages: Array.isArray(messages) ? messages.map(normalizeMessage) : [] };
+  if (!Array.isArray(messages)) throw new ApiError('Chi tiết lịch sử không có danh sách tin nhắn.', undefined, undefined, 'malformed');
+  return { ...item, messages: messages.map(normalizeMessage) };
 }

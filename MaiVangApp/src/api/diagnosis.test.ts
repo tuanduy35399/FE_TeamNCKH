@@ -165,6 +165,16 @@ test('HIST-04 and HIST-09 retain distinct sessions by ID and remove duplicate so
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test('history parser never turns malformed server responses into a false empty state', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response(JSON.stringify({ results: [] }), { status: 200 });
+    await assert.rejects(() => getHistory(), (error: unknown) => error instanceof ApiError && error.kind === 'malformed');
+    globalThis.fetch = async () => new Response(JSON.stringify(historyDto(21)), { status: 200 });
+    await assert.rejects(() => getHistoryDetail(21), (error: unknown) => error instanceof ApiError && error.kind === 'malformed');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('History A and B remain isolated when each is reopened and continued', async () => {
   const originalFetch = globalThis.fetch;
   const histories = new Map([

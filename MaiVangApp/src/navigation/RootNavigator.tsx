@@ -15,6 +15,8 @@ import { HistoryScreen } from '../screens/history/HistoryScreen';
 import { colors, fonts } from '../theme';
 import type { AuthStackParamList, MainStackParamList, TabParamList } from './types';
 import { TutorialProvider, useTutorial } from '../tutorial/TutorialProvider';
+import { ChatSessionProvider } from '../chat/ChatSessionProvider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<MainStackParamList>();
@@ -30,9 +32,10 @@ function AuthNavigator() {
 const icons: Record<keyof TabParamList, keyof typeof Ionicons.glyphMap> = { Chat: 'chatbubble-ellipses-outline', History: 'time-outline', Account: 'person-outline' };
 const labels: Record<keyof TabParamList, string> = { Chat: 'Trò chuyện', History: 'Lịch sử', Account: 'Tài khoản' };
 function AppTabs() {
+  const insets = useSafeAreaInsets();
   return <Tabs.Navigator screenOptions={({ route }) => ({
     headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted,
-    tabBarStyle: { height: 66, paddingTop: 7, paddingBottom: 8, borderTopColor: colors.border },
+    tabBarStyle: { height: 58 + insets.bottom, paddingTop: 7, paddingBottom: Math.max(8, insets.bottom), borderTopColor: colors.border },
     tabBarHideOnKeyboard: true,
     tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.medium },
     tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <TutorialTabIcon routeName={route.name} color={color} size={size} />,
@@ -49,7 +52,7 @@ function TutorialTabIcon({ routeName, color, size }: { routeName: keyof TabParam
   return <View ref={ref} collapsable={false} testID={target ? `tutorial-target-${target}` : undefined}><Ionicons name={icons[routeName]} color={color} size={size} /></View>;
 }
 function MainNavigator() {
-  return <TutorialProvider><MainStack.Navigator><MainStack.Screen name="Tabs" component={AppTabs} options={{ headerShown: false }} /></MainStack.Navigator></TutorialProvider>;
+  return <TutorialProvider><ChatSessionProvider><MainStack.Navigator><MainStack.Screen name="Tabs" component={AppTabs} options={{ headerShown: false }} /></MainStack.Navigator></ChatSessionProvider></TutorialProvider>;
 }
 export function RootNavigator() {
   const { status } = useAuth();

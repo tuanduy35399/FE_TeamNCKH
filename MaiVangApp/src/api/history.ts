@@ -21,7 +21,7 @@ export function nativeImageDescriptor(image: SelectedImage, question?: string) {
 
 export async function getHistory(): Promise<HistoryItem[]> {
   const value = await apiRequest<HistoryListDto[]>(HISTORY_ENDPOINTS.list, { auth: true });
-  if (!Array.isArray(value)) return [];
+  if (!Array.isArray(value)) throw new ApiError('Dữ liệu lịch sử từ máy chủ không hợp lệ.', undefined, undefined, 'malformed');
   const byId = new Map<number, HistoryItem>();
   value.map(normalizeHistoryItem).forEach(item => byId.set(item.id, item));
   return [...byId.values()].sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
