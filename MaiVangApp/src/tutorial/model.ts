@@ -6,7 +6,7 @@ export const tutorialSteps: Array<{ target: TutorialTargetName; title: string; t
   {
     target: 'diagnosis',
     title: 'Chẩn đoán bằng ảnh',
-    text: 'Nhấn nút camera để chụp lá bệnh hoặc chọn ảnh từ thư viện. Ảnh càng rõ, hệ thống càng dễ phân tích.',
+    text: 'Nhấn nút camera để chụp lá bệnh hoặc chọn ảnh từ thư viện.',
   },
   { target: 'history', title: 'Lịch sử trò chuyện', text: 'Xem lại các cuộc trò chuyện trước đây và tiếp tục hỏi trong đúng phiên cũ.' },
   { target: 'newChat', title: 'Tạo cuộc trò chuyện mới', text: 'Bắt đầu một chủ đề mới mà không làm lẫn nội dung với phiên hiện tại.' },

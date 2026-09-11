@@ -23,7 +23,7 @@ test('legacy floating gear is absent and debug logging cannot include auth secre
   for (const file of files) {
     const source = readFileSync(file, 'utf8');
     assert.doesNotMatch(source, /name=["'](?:settings|settings-outline|cog|gear)["']/i, file);
-    assert.doesNotMatch(source, /(?:floating|debug)(?:Settings|Gear|Fab)/i, file);
+    assert.doesNotMatch(source, /(?:floating|debug)(?:Settings|Gear)/i, file);
     for (const line of source.split(/\r?\n/).filter(value => /console\.(?:info|warn|log|error)/.test(value))) {
       assert.doesNotMatch(line, /authorization|accessToken|refreshToken|password/i, file);
     }
@@ -47,14 +47,18 @@ test('one shared session store atomically loads history before navigation and gu
   assert.match(provider, /setCurrentHistoryId\(detail\.id\)[\s\S]*setMessages\(mergeLocalImageTurns/);
   assert.match(history, /const opened = await openHistory\(item\.id\)[\s\S]*if \(opened\) navigation\.navigate\('Chat'\)/);
   assert.doesNotMatch(chat, /route\.params|setMessages\(\[\]\).*focus/);
+  assert.match(chat, /conversationRevision[\s\S]*releaseSubmissionLock\(sendLocked\)/);
 });
 
-test('final diagnosis entry is one draggable camera speed dial with no fake bbox', () => {
+test('final diagnosis entry is one adaptive camera speed dial with no fake bbox', () => {
   const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
   const fab = readFileSync(path.join(process.cwd(), 'src', 'components', 'FloatingCameraFab.tsx'), 'utf8');
   const sourceSheet = readFileSync(path.join(process.cwd(), 'src', 'screens', 'diagnosis', 'ImageSourceSheet.tsx'), 'utf8');
-  assert.match(fab, /PanResponder\.create/);
-  assert.match(fab, /DRAG_THRESHOLD/);
+  assert.match(fab, /floatingFabBottom/);
+  assert.match(fab, /bottomReserved/);
+  assert.match(fab, /Animated\.spring/);
+  assert.match(fab, /actions: \{[^}]*bottom: HEIGHT \+ 9/);
+  assert.match(fab, /Keyboard\.dismiss/);
   assert.match(fab, /camera-speed-dial/);
   assert.match(fab, /Mẹo chụp ảnh rõ/);
   assert.match(fab, /Chọn từ thư viện/);

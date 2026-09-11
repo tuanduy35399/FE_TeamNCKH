@@ -15,7 +15,7 @@ import { useChatSession } from '../../chat/ChatSessionProvider';
 export function HistoryScreen() {
   const { account } = useAuth();
   const navigation = useNavigation<any>();
-  const { openHistory, currentHistoryId, newChat } = useChatSession();
+  const { openHistory, currentHistoryId, newChat, historyRevision, invalidateHistory } = useChatSession();
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,6 +28,7 @@ export function HistoryScreen() {
     refresh ? setRefreshing(true) : setLoading(true); setError('');
     try {
       const serverItems = await getHistory();
+      if (typeof __DEV__ !== 'undefined' && __DEV__) console.info('[MaiCare history list]', { status: 200, count: serverItems.length });
       const localById = new Map((account?.id ? await getLocalImageHistory(account.id) : []).map(item => [item.conversationId, item]));
       setItems(serverItems.map(item => {
         const metadata = localById.get(item.id);
@@ -48,17 +49,17 @@ export function HistoryScreen() {
   function confirmDelete(item: HistoryItem) {
     Alert.alert('Xóa cuộc trò chuyện?', 'Nội dung đã xóa không thể khôi phục.', [
       { text: 'Hủy', style: 'cancel' },
-      { text: 'Xóa', style: 'destructive', onPress: () => void deleteHistory(item.id).then(() => { setItems(current => current.filter(value => value.id !== item.id)); if (currentHistoryId === item.id) newChat(); }).catch(() => setError('Không thể xóa cuộc trò chuyện.')) },
+      { text: 'Xóa', style: 'destructive', onPress: () => void deleteHistory(item.id).then(() => { setItems(current => current.filter(value => value.id !== item.id)); if (currentHistoryId === item.id) newChat(); invalidateHistory(); }).catch(() => setError('Không thể xóa cuộc trò chuyện.')) },
     ]);
   }
   async function saveRename() {
     const title = titleDraft.trim(); if (!editing || !title || saving) return;
     setSaving(true);
-    try { const updated = await renameHistory(editing.id, title); setItems(current => current.map(item => item.id === updated.id ? { ...item, title: updated.title } : item)); setEditing(undefined); }
+    try { const updated = await renameHistory(editing.id, title); setItems(current => current.map(item => item.id === updated.id ? { ...item, title: updated.title } : item)); setEditing(undefined); invalidateHistory(); }
     catch { setError('Không thể đổi tên cuộc trò chuyện.'); }
     finally { setSaving(false); }
   }
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void load(); }, [load, historyRevision]));
   if (loading) return <Screen><LoadingState label="Đang tải lịch sử..." /></Screen>;
   if (error && !items.length) return <Screen><View style={styles.header}><Text style={styles.title}>Lịch sử</Text><Text style={styles.subtitle}>Những lần kiểm tra và câu hỏi trước đây</Text></View><StateView icon="time-outline" title="Chưa thể tải lịch sử" message={error} actionLabel="Thử lại" onAction={() => load()} /></Screen>;
   return <Screen><View style={styles.header}><Text style={styles.title}>Lịch sử</Text><Text style={styles.subtitle}>Những lần kiểm tra và câu hỏi trước đây</Text></View>

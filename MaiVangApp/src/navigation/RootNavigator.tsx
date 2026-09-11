@@ -17,6 +17,7 @@ import type { AuthStackParamList, MainStackParamList, TabParamList } from './typ
 import { TutorialProvider, useTutorial } from '../tutorial/TutorialProvider';
 import { ChatSessionProvider } from '../chat/ChatSessionProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { bottomSafePadding, tabBarHeight } from './mobileLayout';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<MainStackParamList>();
@@ -35,7 +36,7 @@ function AppTabs() {
   const insets = useSafeAreaInsets();
   return <Tabs.Navigator screenOptions={({ route }) => ({
     headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted,
-    tabBarStyle: { height: 58 + insets.bottom, paddingTop: 7, paddingBottom: Math.max(8, insets.bottom), borderTopColor: colors.border },
+    tabBarStyle: { height: tabBarHeight(insets.bottom), paddingTop: 7, paddingBottom: bottomSafePadding(insets.bottom), borderTopColor: colors.border },
     tabBarHideOnKeyboard: true,
     tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.medium },
     tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <TutorialTabIcon routeName={route.name} color={color} size={size} />,

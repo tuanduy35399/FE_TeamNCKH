@@ -27,5 +27,5 @@ test('all seven spotlight targets are registered by name', () => {
 test('diagnosis spotlight describes the final camera pill', () => {
   const step = tutorialSteps.find(value => value.target === 'diagnosis');
   assert.equal(step?.title, 'Chẩn đoán bằng ảnh');
-  assert.match(step?.text || '', /camera.*Ảnh càng rõ/i);
+  assert.equal(step?.text, 'Nhấn nút camera để chụp lá bệnh hoặc chọn ảnh từ thư viện.');
 });

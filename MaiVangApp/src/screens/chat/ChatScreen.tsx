@@ -128,7 +128,7 @@ export function ChatScreen({ navigation }: Props) {
     currentHistoryId: historyId, historyTitle, messages, loadingHistory: loading,
     historyLoadError, historyLoadTarget, setCurrentHistoryId: setHistoryId,
     setHistoryTitle, setMessages, openHistory, newChat: resetSession,
-    beginGeneration: beginSessionGeneration, isCurrentGeneration,
+    beginGeneration: beginSessionGeneration, isCurrentGeneration, invalidateHistory, conversationRevision,
   } = useChatSession();
   const [text, setText] = useState("");
   const [diagnosisMode, setDiagnosisMode] = useState(false);
@@ -172,6 +172,17 @@ export function ChatScreen({ navigation }: Props) {
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
     return () => { show.remove(); hide.remove(); };
   }, []);
+  useEffect(() => {
+    releaseSubmissionLock(sendLocked);
+    setSending(false);
+    setUploadStage(undefined);
+    setText('');
+    setImage(current => { void cleanupNormalizedImage(current); return undefined; });
+    setDiagnosisMode(false);
+    setFailed(undefined);
+    setPickerError('');
+    setSheetOpen(false);
+  }, [conversationRevision]);
   function newChat() {
     resetSession();
     releaseSubmissionLock(sendLocked);
@@ -244,8 +255,10 @@ export function ChatScreen({ navigation }: Props) {
     targetId: number,
     selected?: SelectedImage,
     detections?: Detection[],
+    generationToken?: number,
   ) {
     const detail = await getHistoryDetail(targetId);
+    if (generationToken !== undefined && !isCurrentGeneration(generationToken)) return undefined;
     const next = selected
       ? attachImageResult(detail.messages || [], selected, detections)
       : detail.messages || [];
@@ -316,7 +329,7 @@ export function ChatScreen({ navigation }: Props) {
         : undefined;
       let reconciledMessages: ChatMessage[] | undefined;
       try {
-        reconciledMessages = await reconcile(targetId, selected, detections);
+        reconciledMessages = await reconcile(targetId, selected, detections, token);
       } catch {
         setMessages((current) =>
           current.concat({
@@ -340,6 +353,8 @@ export function ChatScreen({ navigation }: Props) {
           userMessageId: [...(reconciledMessages || [])].reverse().find(message => message.role === "user")?.id,
           assistantMessageId: [...(reconciledMessages || [])].reverse().find(message => message.role === "assistant")?.id,
         }).catch(() => undefined);
+      if (typeof __DEV__ !== 'undefined' && __DEV__) console.info('[MaiCare chat success]', { historyId: targetId, status: 200 });
+      invalidateHistory();
       if (selected) {
         setText("");
         setImage(imageAfterRequest(selected, "success"));
@@ -361,7 +376,7 @@ export function ChatScreen({ navigation }: Props) {
         if (account?.id) await saveActiveHistoryId(account.id, null);
       } else if (targetId)
         try {
-          await reconcile(targetId, selected);
+          await reconcile(targetId, selected, undefined, token);
         } catch {
           /* Keep optimistic turn when reconciliation is unavailable. */
         }

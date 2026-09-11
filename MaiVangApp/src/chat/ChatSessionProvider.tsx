@@ -14,6 +14,8 @@ type SessionContext = {
   loadingHistory: boolean;
   historyLoadError: string;
   historyLoadTarget?: number;
+  historyRevision: number;
+  conversationRevision: number;
   setCurrentHistoryId: (id: number | null) => void;
   setHistoryTitle: (title: string) => void;
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
@@ -21,6 +23,7 @@ type SessionContext = {
   newChat: () => void;
   beginGeneration: () => number;
   isCurrentGeneration: (token: number) => boolean;
+  invalidateHistory: () => void;
 };
 
 const ChatSessionContext = createContext<SessionContext | null>(null);
@@ -33,14 +36,18 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyLoadError, setHistoryLoadError] = useState('');
   const [historyLoadTarget, setHistoryLoadTarget] = useState<number>();
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const [conversationRevision, setConversationRevision] = useState(0);
   const generation = useRef(0);
   const restoredUser = useRef<number | undefined>(undefined);
 
   const beginGeneration = useCallback(() => ++generation.current, []);
   const isCurrentGeneration = useCallback((token: number) => token === generation.current, []);
+  const invalidateHistory = useCallback(() => setHistoryRevision(value => value + 1), []);
 
   const newChat = useCallback(() => {
     beginGeneration();
+    setConversationRevision(value => value + 1);
     setCurrentHistoryId(null);
     setHistoryTitle('Cuộc trò chuyện mới');
     setMessages([]);
@@ -53,11 +60,13 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
   const openHistory = useCallback(async (id: number) => {
     if (!Number.isInteger(id) || id <= 0) return false;
     const token = beginGeneration();
+    setConversationRevision(value => value + 1);
     setLoadingHistory(true);
     setHistoryLoadError('');
     setHistoryLoadTarget(id);
     try {
       const detail = await getHistoryDetail(id);
+      if (typeof __DEV__ !== 'undefined' && __DEV__) console.info('[MaiCare history detail]', { historyId: id, status: 200, messageCount: detail.messages?.length || 0 });
       if (detail.id !== id) throw new ApiError('Phản hồi lịch sử không khớp.', undefined, undefined, 'malformed');
       const metadata = account?.id ? await getLocalImageHistoryItems(account.id, id).catch(() => []) : [];
       if (!isCurrentGeneration(token)) return false;
@@ -94,9 +103,9 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
   }, [account?.id, openHistory]);
 
   const value = useMemo<SessionContext>(() => ({
-    currentHistoryId, historyTitle, messages, loadingHistory, historyLoadError, historyLoadTarget,
-    setCurrentHistoryId, setHistoryTitle, setMessages, openHistory, newChat, beginGeneration, isCurrentGeneration,
-  }), [currentHistoryId, historyTitle, messages, loadingHistory, historyLoadError, historyLoadTarget, openHistory, newChat, beginGeneration, isCurrentGeneration]);
+    currentHistoryId, historyTitle, messages, loadingHistory, historyLoadError, historyLoadTarget, historyRevision, conversationRevision,
+    setCurrentHistoryId, setHistoryTitle, setMessages, openHistory, newChat, beginGeneration, isCurrentGeneration, invalidateHistory,
+  }), [currentHistoryId, historyTitle, messages, loadingHistory, historyLoadError, historyLoadTarget, historyRevision, conversationRevision, openHistory, newChat, beginGeneration, isCurrentGeneration, invalidateHistory]);
   return <ChatSessionContext.Provider value={value}>{children}</ChatSessionContext.Provider>;
 }
 
