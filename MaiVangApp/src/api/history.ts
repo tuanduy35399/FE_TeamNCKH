@@ -82,8 +82,7 @@ export async function sendHistoryImage(id: number, image: SelectedImage, questio
     });
     if (error instanceof ApiError && [400, 415, 422].includes(error.status || 0)) throw new ApiError('Ảnh không hợp lệ hoặc định dạng chưa được hỗ trợ.', error.status, error.fieldErrors, error.kind, error.debugDetail);
     if (error instanceof ApiError && error.status === 413) throw new ApiError('Ảnh vượt quá dung lượng máy chủ cho phép. Vui lòng chọn ảnh nhỏ hơn.', 413, error.fieldErrors, error.kind, error.debugDetail);
-    if (error instanceof ApiError && error.status === 502) throw new ApiError('Dịch vụ chẩn đoán trả về dữ liệu không hợp lệ. Ảnh của bạn vẫn được giữ lại.', 502, error.fieldErrors, error.kind, error.debugDetail);
-    if (error instanceof ApiError && error.status === 503) throw new ApiError('Dịch vụ chẩn đoán hình ảnh hiện chưa sẵn sàng. Ảnh của bạn vẫn được giữ lại để thử lại.', 503, error.fieldErrors, error.kind, error.debugDetail);
+    if (error instanceof ApiError && (error.status === 502 || error.status === 503)) throw new ApiError('Dịch vụ chẩn đoán AI đang tạm thời gián đoạn. Ảnh của bạn vẫn được giữ lại để thử lại.', error.status, error.fieldErrors, error.kind, error.debugDetail);
     if (error instanceof ApiError && (error.status === 504 || error.kind === 'timeout')) throw new ApiError('Chẩn đoán ảnh đang mất nhiều thời gian hơn bình thường. Ảnh của bạn vẫn được giữ lại để thử lại.', error.status, error.fieldErrors, error.kind, error.debugDetail);
     if (error instanceof ApiError && error.status && error.status >= 500) throw new ApiError('Dịch vụ chẩn đoán hình ảnh đang tạm thời gián đoạn. Ảnh của bạn vẫn được giữ lại để thử lại.', error.status, error.fieldErrors, error.kind, error.debugDetail);
     throw error;

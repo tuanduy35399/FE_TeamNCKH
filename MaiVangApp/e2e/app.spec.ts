@@ -15,7 +15,7 @@ test.afterEach(async ({ request }) => {
 test('chat-first auth, isolated history continuation, opt-in diagnosis, persistence and responsive layout', async ({ page, request }) => {
   const suffix = Date.now(); const username = `mobile_${suffix}`; const password = `MaiCare!${suffix}z`;
   cleanupCredentials = { username, password };
-  const apiResponses: string[] = []; const pageErrors: string[] = [];
+  const apiResponses: string[] = []; const pageErrors: string[] = []; let imageRequestObserved = false;
   page.on('pageerror', error => pageErrors.push(error.message));
   page.on('response', response => { if (response.url().includes('/api/')) apiResponses.push(`${response.request().method()} ${response.status()} ${new URL(response.url()).pathname}`); });
   const waitForAnswerOrServiceError = async (minimumAnswers: number) => {
@@ -52,6 +52,10 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
 
   await page.getByRole('tab', { name: /Trò chuyện/ }).click(); await page.getByLabel('Cuộc trò chuyện mới').click(); await page.getByTestId('diagnosis-toggle').click();
   await expect(page.getByTestId('camera-speed-dial')).toBeVisible();
+  await page.route('http://127.0.0.1:8010/api/v1/history/*/chat/image/', async route => {
+    imageRequestObserved = true;
+    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Upstream diagnosis service unavailable during release regression.' }) });
+  });
   const sampleImage = path.resolve(process.cwd(), '..', '..', 'reference', 'django-backend', 'diseases', '20260124_151321.jpg');
   const chooser = page.waitForEvent('filechooser'); await page.getByTestId('fab-gallery-option').click(); await (await chooser).setFiles(sampleImage); await expect(page.getByTestId('selected-image')).toBeVisible();
   const diagnosisInput = page.getByPlaceholder('Thêm câu hỏi (không bắt buộc)...');
@@ -64,7 +68,7 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
     await page.getByTestId('request-error').getByText('Xóa ảnh', { exact: true }).click();
   } else {
     await expect(page.getByTestId('selected-image')).toHaveCount(0);
-    await expect(diagnosisInput).toHaveValue('');
+    await expect(page.getByPlaceholder('Nhắn tin cho MaiCare...')).toHaveValue('');
   }
   if (await page.getByLabel('Tắt chẩn đoán').isVisible().catch(() => false)) {
     await page.getByLabel('Tắt chẩn đoán').click();
@@ -86,5 +90,5 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   }
   await expect(page.getByTestId('tutorial-overlay')).toHaveCount(0);
   await page.getByRole('tab', { name: /Tài khoản/ }).click(); await page.getByTestId('delete-account-button').click(); await page.getByTestId('confirm-delete').click(); await expect(page.getByText('Tài khoản đã được xóa.')).toBeVisible(); cleanupCredentials = undefined;
-  expect(apiResponses.some(item => item.endsWith('/chat/'))).toBe(true); expect(apiResponses.some(item => item.endsWith('/chat/image/'))).toBe(true); expect(pageErrors).toEqual([]);
+  expect(apiResponses.some(item => item.endsWith('/chat/'))).toBe(true); expect(apiResponses.some(item => item.endsWith('/chat/image/'))).toBe(true); expect(imageRequestObserved).toBe(true); expect(pageErrors).toEqual([]);
 });

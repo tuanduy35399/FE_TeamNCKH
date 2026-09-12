@@ -228,7 +228,7 @@ test('HTTP 503 is an upstream diagnosis failure, never an empty-detections succe
       () => sendHistoryImage(41, { uri: 'file:///leaf.jpg', name: 'leaf.jpg', file: new Blob(['leaf'], { type: 'image/jpeg' }) }),
       (error: unknown) => error instanceof ApiError
         && error.status === 503
-        && error.userMessage.includes('chẩn đoán hình ảnh hiện chưa sẵn sàng'),
+        && error.userMessage.includes('chẩn đoán AI đang tạm thời gián đoạn'),
     );
   } finally { globalThis.fetch = originalFetch; }
 });

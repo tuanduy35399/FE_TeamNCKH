@@ -61,6 +61,8 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
     if (!Number.isInteger(id) || id <= 0) return false;
     const token = beginGeneration();
     setConversationRevision(value => value + 1);
+    setCurrentHistoryId(id);
+    setMessages([]);
     setLoadingHistory(true);
     setHistoryLoadError('');
     setHistoryLoadTarget(id);
@@ -68,12 +70,18 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
       const detail = await getHistoryDetail(id);
       if (typeof __DEV__ !== 'undefined' && __DEV__) console.info('[MaiCare history detail]', { historyId: id, status: 200, messageCount: detail.messages?.length || 0 });
       if (detail.id !== id) throw new ApiError('Phản hồi lịch sử không khớp.', undefined, undefined, 'malformed');
-      const metadata = account?.id ? await getLocalImageHistoryItems(account.id, id).catch(() => []) : [];
       if (!isCurrentGeneration(token)) return false;
       setCurrentHistoryId(detail.id);
       setHistoryTitle(detail.title || 'Cuộc trò chuyện');
-      setMessages(mergeLocalImageTurns(detail.messages || [], metadata));
-      if (account?.id) await saveActiveHistoryId(account.id, detail.id);
+      setMessages(detail.messages || []);
+      if (account?.id) {
+        void saveActiveHistoryId(account.id, detail.id);
+        void getLocalImageHistoryItems(account.id, id).then(metadata => {
+          if (isCurrentGeneration(token) && metadata.length) {
+            setMessages(current => mergeLocalImageTurns(current, metadata));
+          }
+        }).catch(() => undefined);
+      }
       return true;
     } catch (error) {
       if (!isCurrentGeneration(token)) return false;
@@ -84,7 +92,7 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
         setHistoryLoadTarget(undefined);
         if (account?.id) await saveActiveHistoryId(account.id, null);
       } else {
-        setHistoryLoadError('Không thể tải cuộc trò chuyện này. Vui lòng thử lại.');
+        setHistoryLoadError('Không thể tải cuộc trò chuyện.');
       }
       return false;
     } finally {

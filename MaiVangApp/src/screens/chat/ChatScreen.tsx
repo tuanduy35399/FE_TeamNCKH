@@ -45,6 +45,7 @@ import {
   imageAfterRequest,
   releaseSubmissionLock,
 } from "../../chat/submission";
+import { collapsePersistedRetryCopies } from "../../chat/messageReconciliation";
 import {
   cleanupNormalizedImage,
   normalizeImageForUpload,
@@ -160,13 +161,6 @@ export function ChatScreen({ navigation }: Props) {
     return () => cleanups.forEach((cleanup) => cleanup());
   }, [registerTarget]);
 
-  function beginGeneration() {
-    const token = beginSessionGeneration();
-    releaseSubmissionLock(sendLocked);
-    setSending(false);
-    setUploadStage(undefined);
-    return token;
-  }
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
@@ -184,12 +178,14 @@ export function ChatScreen({ navigation }: Props) {
     setSheetOpen(false);
   }, [conversationRevision]);
   function newChat() {
+    const previousImage = image;
     resetSession();
     releaseSubmissionLock(sendLocked);
     setSending(false);
     setUploadStage(undefined);
     setText("");
     setImage(undefined);
+    void cleanupNormalizedImage(previousImage);
     setDiagnosisMode(false);
     setFailed(undefined);
   }
@@ -256,12 +252,16 @@ export function ChatScreen({ navigation }: Props) {
     selected?: SelectedImage,
     detections?: Detection[],
     generationToken?: number,
+    retryQuestion?: string,
   ) {
     const detail = await getHistoryDetail(targetId);
     if (generationToken !== undefined && !isCurrentGeneration(generationToken)) return undefined;
-    const next = selected
-      ? attachImageResult(detail.messages || [], selected, detections)
+    const serverMessages = retryQuestion
+      ? collapsePersistedRetryCopies(detail.messages || [], retryQuestion)
       : detail.messages || [];
+    const next = selected
+      ? attachImageResult(serverMessages, selected, detections)
+      : serverMessages;
     setMessages(next);
     return next;
   }
@@ -329,7 +329,7 @@ export function ChatScreen({ navigation }: Props) {
         : undefined;
       let reconciledMessages: ChatMessage[] | undefined;
       try {
-        reconciledMessages = await reconcile(targetId, selected, detections, token);
+        reconciledMessages = await reconcile(targetId, selected, detections, token, retry ? question : undefined);
       } catch {
         setMessages((current) =>
           current.concat({
@@ -376,7 +376,7 @@ export function ChatScreen({ navigation }: Props) {
         if (account?.id) await saveActiveHistoryId(account.id, null);
       } else if (targetId)
         try {
-          await reconcile(targetId, selected, undefined, token);
+          await reconcile(targetId, selected, undefined, token, retry ? question : undefined);
         } catch {
           /* Keep optimistic turn when reconciliation is unavailable. */
         }

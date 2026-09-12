@@ -44,7 +44,8 @@ test('one shared session store atomically loads history before navigation and gu
   const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
   assert.match(provider, /detail\.id !== id/);
   assert.match(provider, /!isCurrentGeneration\(token\)/);
-  assert.match(provider, /setCurrentHistoryId\(detail\.id\)[\s\S]*setMessages\(mergeLocalImageTurns/);
+  assert.match(provider, /setCurrentHistoryId\(id\)[\s\S]*setMessages\(\[\]\)[\s\S]*getHistoryDetail\(id\)/);
+  assert.match(provider, /setMessages\(detail\.messages \|\| \[\]\)[\s\S]*getLocalImageHistoryItems/);
   assert.match(history, /const opened = await openHistory\(item\.id\)[\s\S]*if \(opened\) navigation\.navigate\('Chat'\)/);
   assert.doesNotMatch(chat, /route\.params|setMessages\(\[\]\).*focus/);
   assert.match(chat, /conversationRevision[\s\S]*releaseSubmissionLock\(sendLocked\)/);
