@@ -4,7 +4,7 @@ const { URL } = require('node:url');
 
 const listenHost = '127.0.0.1';
 const listenPort = 8010;
-const djangoTarget = new URL(process.env.MAIVANG_DJANGO_ORIGIN || 'https://chat-bot-maivang-backend.onrender.com');
+const djangoTarget = new URL(process.env.MAIVANG_DJANGO_ORIGIN || 'https://maivang-api-775925161402.asia-southeast1.run.app');
 const allowedOrigins = new Set(['http://localhost:5175', 'http://127.0.0.1:5175']);
 const djangoPrefixes = ['/api/v1/user/', '/api/v1/history/', '/api/v1/diseases/', '/api/v1/schema/'];
 const hopByHop = new Set(['connection', 'host', 'transfer-encoding']);

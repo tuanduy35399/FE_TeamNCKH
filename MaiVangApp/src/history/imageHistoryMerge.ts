@@ -5,6 +5,8 @@ export type LocalImageTurnMetadata = {
   description?: string;
   detections: Detection[];
   imageUri?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   userMessageId?: number;
   assistantMessageId?: number;
 };
@@ -28,7 +30,7 @@ export function mergeLocalImageTurns(messages: ChatMessage[], records: LocalImag
       }
     }
     if (userIndex < 0) return;
-    merged[userIndex] = { ...merged[userIndex]!, imageUri: record.imageUri };
+    merged[userIndex] = { ...merged[userIndex]!, imageUri: record.imageUri, imageWidth: record.imageWidth, imageHeight: record.imageHeight, detections: record.detections };
 
     let assistantIndex = record.assistantMessageId == null ? -1 : merged.findIndex(message => message.id === record.assistantMessageId && message.role === 'assistant');
     if (assistantIndex < 0) {

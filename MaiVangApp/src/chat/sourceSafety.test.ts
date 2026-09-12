@@ -32,7 +32,13 @@ test('legacy floating gear is absent and debug logging cannot include auth secre
 
 test('release configuration defaults to the deployed Django API only', () => {
   const config = readFileSync(path.join(process.cwd(), 'src', 'api', 'config.ts'), 'utf8');
-  assert.match(config, /https:\/\/chat-bot-maivang-backend\.onrender\.com/);
+  const eas = readFileSync(path.join(process.cwd(), 'eas.json'), 'utf8');
+  const bridge = readFileSync(path.join(process.cwd(), 'scripts', 'api-bridge.cjs'), 'utf8');
+  const deployedWeb = readFileSync(path.join(process.cwd(), 'scripts', 'start-deployed-web.ps1'), 'utf8');
+  const releaseSources = [config, eas, bridge, deployedWeb].join('\n');
+  assert.match(config, /https:\/\/maivang-api-775925161402\.asia-southeast1\.run\.app/);
+  assert.match(eas, /EXPO_PUBLIC_API_BASE_URL[\s\S]*maivang-api-775925161402\.asia-southeast1\.run\.app/);
+  assert.doesNotMatch(releaseSources, /chat-bot-maivang-backend\.onrender\.com|chat-service-nckh\.onrender\.com/);
   const timeout = Number(config.match(/IMAGE_TIMEOUT_MS\s*=\s*([\d_]+)/)?.[1]?.replaceAll('_', ''));
   assert.ok(timeout >= 120_000 && timeout <= 180_000);
   assert.doesNotMatch(config, /chat-service-nckh|\/chat\/image/);
@@ -51,7 +57,7 @@ test('one shared session store atomically loads history before navigation and gu
   assert.match(chat, /conversationRevision[\s\S]*releaseSubmissionLock\(sendLocked\)/);
 });
 
-test('final diagnosis entry is one adaptive camera speed dial with no fake bbox', () => {
+test('final diagnosis entry is one adaptive camera speed dial with only API-backed bbox geometry', () => {
   const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
   const fab = readFileSync(path.join(process.cwd(), 'src', 'components', 'FloatingCameraFab.tsx'), 'utf8');
   const sourceSheet = readFileSync(path.join(process.cwd(), 'src', 'screens', 'diagnosis', 'ImageSourceSheet.tsx'), 'utf8');
@@ -67,5 +73,7 @@ test('final diagnosis entry is one adaptive camera speed dial with no fake bbox'
   assert.match(sourceSheet, /testID="camera-option"/);
   assert.match(sourceSheet, /testID="library-option"/);
   assert.doesNotMatch(chat + fab, /scan-outline/);
-  assert.doesNotMatch(chat + fab, /bbox|xyxy|x1|y1|x2|y2/);
+  assert.match(chat, /bbox_xyxy/);
+  assert.match(chat, /scaleContainedBoundingBox/);
+  assert.doesNotMatch(chat, /bbox:\s*\[[\d\s,.]+\]/);
 });

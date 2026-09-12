@@ -9,7 +9,7 @@ $env:TEMP=$runtimePath
 $env:TMP=$runtimePath
 $env:npm_config_cache=$cachePath
 $env:PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD='1'
-$env:MAIVANG_DJANGO_ORIGIN='https://chat-bot-maivang-backend.onrender.com'
+$env:MAIVANG_DJANGO_ORIGIN='https://maivang-api-775925161402.asia-southeast1.run.app'
 $env:EXPO_PUBLIC_API_BASE_URL=$env:MAIVANG_DJANGO_ORIGIN
 $env:EXPO_PUBLIC_WEB_API_BASE_URL='http://127.0.0.1:8010'
 

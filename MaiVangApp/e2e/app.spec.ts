@@ -49,6 +49,13 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   await page.getByPlaceholder('Nhắn tin cho MaiCare...').fill('Khi nào nên bón phân cho mai?'); await page.getByTestId('chat-send').click(); await waitForAnswerOrServiceError(1);
   await page.getByRole('tab', { name: /Lịch sử/ }).click();
   await expect(page.getByRole('button').filter({ hasText: 'Cách chăm mai sau Tết?' })).toHaveCount(1); await expect(page.getByRole('button').filter({ hasText: 'Khi nào nên bón phân cho mai?' })).toHaveCount(1);
+  await page.getByRole('button').filter({ hasText: 'Khi nào nên bón phân cho mai?' }).first().click();
+  await expect(page.getByTestId('user-message').filter({ hasText: 'Khi nào nên bón phân cho mai?' })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByTestId('user-message').filter({ hasText: 'Cách chăm mai sau Tết?' })).toHaveCount(0);
+  await page.getByRole('tab', { name: /Lịch sử/ }).click();
+  await page.getByRole('button').filter({ hasText: 'Cách chăm mai sau Tết?' }).first().click();
+  await expect(page.getByTestId('user-message').filter({ hasText: 'Cách chăm mai sau Tết?' })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByTestId('user-message').filter({ hasText: 'Khi nào nên bón phân cho mai?' })).toHaveCount(0);
 
   await page.getByRole('tab', { name: /Trò chuyện/ }).click(); await page.getByLabel('Cuộc trò chuyện mới').click(); await page.getByTestId('diagnosis-toggle').click();
   await expect(page.getByTestId('camera-speed-dial')).toBeVisible();
@@ -77,6 +84,9 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
 
   await page.reload(); await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 45_000 }); await expect(page.getByText('Tôi nên xử lý bước đầu thế nào?')).toBeVisible({ timeout: 45_000 });
   await expect(page.getByTestId('tutorial-overlay')).toHaveCount(0);
+  await page.getByRole('tab', { name: /Lịch sử/ }).click();
+  await page.getByRole('button').filter({ hasText: 'Cách chăm mai sau Tết?' }).first().click();
+  await expect(page.getByTestId('user-message').filter({ hasText: 'Cách chăm mai sau Tết?' })).toBeVisible({ timeout: 45_000 });
   for (const viewport of [{ width: 360, height: 800 }, { width: 390, height: 844 }, { width: 412, height: 915 }]) {
     await page.setViewportSize(viewport); expect(await page.locator('body').evaluate(node => node.scrollWidth)).toBeLessThanOrEqual(viewport.width); await expect(page.getByTestId('chat-send')).toBeVisible();
   }

@@ -50,6 +50,7 @@ import {
   cleanupNormalizedImage,
   normalizeImageForUpload,
 } from "../../images/normalizeImage";
+import { scaleContainedBoundingBox } from "../../images/imageGeometry";
 import { useTutorial } from "../../tutorial/TutorialProvider";
 import { ImageSourceSheet } from "../diagnosis/ImageSourceSheet";
 import { colors, radius, spacing } from "../../theme";
@@ -78,21 +79,22 @@ function selectedAsset(asset: ImagePicker.ImagePickerAsset): SelectedImage {
 }
 export function normalizeDetections(value: unknown): Detection[] {
   if (!Array.isArray(value)) return [];
-  const unique = new Map<string, Detection>();
-  value.forEach((item) => {
+  return value.map((item) => {
     const raw =
       item && typeof item === "object" ? (item as Record<string, unknown>) : {};
-    const detection = {
+    const coordinates = Array.isArray(raw.bbox_xyxy) ? raw.bbox_xyxy : undefined;
+    const bbox = coordinates?.length === 4 && coordinates.every(item => typeof item === "number" && Number.isFinite(item))
+      ? coordinates as [number, number, number, number]
+      : undefined;
+    return {
       label: typeof raw.name === "string" ? raw.name : undefined,
       confidence:
         typeof raw.confidence === "number" ? raw.confidence : undefined,
+      bbox,
+      classId: typeof raw.class_id === "number" ? raw.class_id : undefined,
+      diseaseName: typeof raw.disease_name === "string" ? raw.disease_name : undefined,
     };
-    const key = (detection.label || "unknown").trim().toLocaleLowerCase();
-    const existing = unique.get(key);
-    if (!existing || (detection.confidence ?? -1) > (existing.confidence ?? -1))
-      unique.set(key, detection);
   });
-  return [...unique.values()];
 }
 function titleFor(text: string, hasImage: boolean) {
   const clean = text.replace(/\s+/g, " ").trim();
@@ -115,7 +117,7 @@ function attachImageResult(
   });
   return messages.map((message, index) =>
     index === userIndex
-      ? { ...message, imageUri: image.uri }
+      ? { ...message, imageUri: image.uri, imageWidth: image.width, imageHeight: image.height, detections }
       : index === assistantIndex && detections
         ? { ...message, detections }
         : message,
@@ -768,13 +770,7 @@ function MessageBubble({
           user ? styles.userBubble : styles.assistantBubble,
         ]}
       >
-        {message.imageUri && (
-          <Image
-            source={{ uri: message.imageUri }}
-            resizeMode="cover"
-            style={styles.messageImage}
-          />
-        )}
+        {message.imageUri && <DiagnosedImage message={message} />}
         {user && !!message.content && (
           <Text style={styles.userText}>{message.content}</Text>
         )}
@@ -836,6 +832,21 @@ function MessageBubble({
       </View>
     </View>
   );
+}
+function DiagnosedImage({ message }: { message: ChatMessage }) {
+  const [frame, setFrame] = useState({ width: 0, height: 0 });
+  const [source, setSource] = useState({ width: message.imageWidth || 0, height: message.imageHeight || 0 });
+  useEffect(() => {
+    if (!message.imageUri || source.width > 0 || source.height > 0) return;
+    Image.getSize(message.imageUri, (width, height) => setSource({ width, height }), () => undefined);
+  }, [message.imageUri, source.height, source.width]);
+  return <View testID="diagnosed-image" onLayout={event => setFrame(event.nativeEvent.layout)} style={styles.messageImageFrame}>
+    <Image source={{ uri: message.imageUri }} resizeMode="contain" style={styles.messageImage} />
+    {message.detections?.map((detection, index) => {
+      const box = detection.bbox && scaleContainedBoundingBox(detection.bbox, source, frame);
+      return box ? <View key={`${detection.label}-${index}`} testID="detection-box" pointerEvents="none" style={[styles.boundingBox, box]}><Text numberOfLines={1} style={styles.boundingLabel}>{diseaseLabel(detection.label)}</Text></View> : null;
+    })}
+  </View>;
 }
 function RequestError({
   failed,
@@ -990,14 +1001,18 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 5,
   },
   userText: { color: "#fff", fontSize: 15, lineHeight: 22, flexShrink: 1 },
-  messageImage: {
+  messageImageFrame: {
     width: 196,
     height: 146,
     maxWidth: "100%",
     borderRadius: 12,
     backgroundColor: colors.primarySoft,
     marginBottom: 8,
+    overflow: "hidden",
   },
+  messageImage: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },
+  boundingBox: { position: "absolute", borderWidth: 2, borderColor: "#FFD65A", backgroundColor: "rgba(255,214,90,0.08)" },
+  boundingLabel: { position: "absolute", left: -2, top: -20, maxWidth: 150, paddingHorizontal: 4, paddingVertical: 2, color: "#13291C", backgroundColor: "#FFD65A", fontSize: 10, fontWeight: "900" },
   diagnosisResult: {
     gap: 7,
     paddingBottom: 11,

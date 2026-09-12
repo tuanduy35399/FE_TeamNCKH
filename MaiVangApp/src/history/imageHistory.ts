@@ -20,6 +20,8 @@ export type LocalImageHistory = {
   turnKey?: string;
   storedImageUri?: string;
   imageUri?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   transientImageUri?: boolean;
 };
 
@@ -129,6 +131,7 @@ export async function saveLocalImageHistory(input: {
     version: VERSION, userId: input.userId, conversationId: input.conversationId, title: input.title,
     description: input.description, detections: input.detections, createdAt: new Date().toISOString(), storedImageUri,
     userMessageId: input.userMessageId, assistantMessageId: input.assistantMessageId, turnKey,
+    imageWidth: input.image.width, imageHeight: input.image.height,
   };
   const records = await readMetadata(input.userId);
   await writeMetadata(input.userId, [...records.filter(item => !(item.conversationId === input.conversationId && item.turnKey === turnKey)), record]);

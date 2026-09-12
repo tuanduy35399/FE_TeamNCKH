@@ -5,9 +5,10 @@ export type SelectedImage = {
   uploadUri?: string; uploadName?: string; uploadMimeType?: string; uploadSize?: number;
 };
 export type DiseaseDetail = { id: number; name: string; information: string; imageUrl?: string };
-export type Detection = { label?: string; confidence?: number };
+export type BoundingBox = [number, number, number, number];
+export type Detection = { label?: string; confidence?: number; bbox?: BoundingBox; classId?: number; diseaseName?: string };
 export type DiagnosisResult = { answer: string; conversationId: number; detections: Detection[]; originalImageUri?: string };
-export type ChatMessage = { id: number; role: 'user' | 'assistant' | 'error' | string; content: string; createdAt: string; imageUri?: string; detections?: Detection[]; sourceQuestion?: string };
+export type ChatMessage = { id: number; role: 'user' | 'assistant' | 'error' | string; content: string; createdAt: string; imageUri?: string; imageWidth?: number; imageHeight?: number; detections?: Detection[]; sourceQuestion?: string };
 export type HistoryItem = {
   id: number; title: string; createdAt: string; updatedAt: string; messages?: ChatMessage[];
   kind?: 'text' | 'image'; imageUri?: string; transientImageUri?: boolean; description?: string; detections?: Detection[];
