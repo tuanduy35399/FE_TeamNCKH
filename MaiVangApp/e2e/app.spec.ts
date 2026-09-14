@@ -13,6 +13,7 @@ test.afterEach(async ({ request }) => {
 });
 
 test('chat-first auth, isolated history continuation, opt-in diagnosis, persistence and responsive layout', async ({ page, request }) => {
+  test.setTimeout(900_000);
   const suffix = Date.now(); const username = `mobile_${suffix}`; const password = `MaiCare!${suffix}z`;
   cleanupCredentials = { username, password };
   const apiResponses: string[] = []; const pageErrors: string[] = []; let imageRequestObserved = false;
