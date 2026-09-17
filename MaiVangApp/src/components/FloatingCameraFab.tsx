@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Animated, Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, BackHandler, Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { floatingFabBottom } from '../navigation/mobileLayout';
 import { colors, radius, spacing } from '../theme';
@@ -22,6 +22,15 @@ export function FloatingCameraFab({ bottomReserved, keyboardVisible, targetRef, 
     ]));
     animation.start(); return () => animation.stop();
   }, [pulse]);
+  useEffect(() => {
+    if (!open && !tips) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (tips) setTips(false);
+      else setOpen(false);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [open, tips]);
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
     {open ? <Pressable accessibilityLabel="Đóng tùy chọn ảnh" onPress={() => setOpen(false)} style={StyleSheet.absoluteFill} /> : null}
     <Animated.View ref={targetRef} collapsable={false} testID="tutorial-target-diagnosis" style={[styles.floating, { right: Math.max(12, insets.right + 12), bottom }]}>

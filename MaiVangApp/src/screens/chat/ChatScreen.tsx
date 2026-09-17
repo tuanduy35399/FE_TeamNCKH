@@ -4,6 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   FlatList,
   Image,
   Keyboard,
@@ -52,7 +53,6 @@ import {
 } from "../../images/normalizeImage";
 import { scaleContainedBoundingBox } from "../../images/imageGeometry";
 import { useTutorial } from "../../tutorial/TutorialProvider";
-import { ImageSourceSheet } from "../diagnosis/ImageSourceSheet";
 import { colors, radius, spacing } from "../../theme";
 import type { ChatMessage, Detection, SelectedImage } from "../../types/domain";
 import type { TabParamList } from "../../navigation/types";
@@ -134,12 +134,10 @@ export function ChatScreen({ navigation }: Props) {
     beginGeneration: beginSessionGeneration, isCurrentGeneration, invalidateHistory, conversationRevision,
   } = useChatSession();
   const [text, setText] = useState("");
-  const [diagnosisMode, setDiagnosisMode] = useState(false);
   const [image, setImage] = useState<SelectedImage>();
   const [preparingImage, setPreparingImage] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [pickerError, setPickerError] = useState("");
-  const [openSettings, setOpenSettings] = useState(false);
+  const [pickerNeedsSettings, setPickerNeedsSettings] = useState(false);
   const [sending, setSending] = useState(false);
   const [uploadStage, setUploadStage] = useState<UploadStage>();
   const [failed, setFailed] = useState<FailedRequestState>();
@@ -169,15 +167,22 @@ export function ChatScreen({ navigation }: Props) {
     return () => { show.remove(); hide.remove(); };
   }, []);
   useEffect(() => {
+    if (!image || sending) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      removeImage();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [image, sending]);
+  useEffect(() => {
     releaseSubmissionLock(sendLocked);
     setSending(false);
     setUploadStage(undefined);
     setText('');
     setImage(current => { void cleanupNormalizedImage(current); return undefined; });
-    setDiagnosisMode(false);
     setFailed(undefined);
     setPickerError('');
-    setSheetOpen(false);
+    setPickerNeedsSettings(false);
   }, [conversationRevision]);
   function newChat() {
     const previousImage = image;
@@ -188,19 +193,18 @@ export function ChatScreen({ navigation }: Props) {
     setText("");
     setImage(undefined);
     void cleanupNormalizedImage(previousImage);
-    setDiagnosisMode(false);
     setFailed(undefined);
   }
 
   async function prepare(asset: ImagePicker.ImagePickerAsset) {
     setPreparingImage(true);
     setPickerError("");
+    setPickerNeedsSettings(false);
     try {
       const previous = image;
       setImage(await normalizeImageForUpload(selectedAsset(asset)));
       await cleanupNormalizedImage(previous);
       setFailed(undefined);
-      setSheetOpen(false);
     } catch {
       setPickerError(
         "Không thể chuẩn hóa ảnh này. Vui lòng chọn ảnh JPG hoặc PNG khác.",
@@ -214,7 +218,7 @@ export function ChatScreen({ navigation }: Props) {
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setOpenSettings(!permission.canAskAgain);
+        setPickerNeedsSettings(!permission.canAskAgain);
         setPickerError(
           "MaiCare cần quyền truy cập thư viện ảnh để bạn chọn ảnh.",
         );
@@ -225,7 +229,6 @@ export function ChatScreen({ navigation }: Props) {
         quality: 0.92,
       });
       if (!result.canceled && result.assets[0]) await prepare(result.assets[0]);
-      else setSheetOpen(false);
     } catch {
       setPickerError("Không thể mở thư viện ảnh lúc này.");
     }
@@ -234,7 +237,7 @@ export function ChatScreen({ navigation }: Props) {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        setOpenSettings(!permission.canAskAgain);
+        setPickerNeedsSettings(!permission.canAskAgain);
         setPickerError("MaiCare cần quyền camera để bạn chụp ảnh lá mai.");
         return;
       }
@@ -243,7 +246,6 @@ export function ChatScreen({ navigation }: Props) {
         quality: 0.92,
       });
       if (!result.canceled && result.assets[0]) await prepare(result.assets[0]);
-      else setSheetOpen(false);
     } catch {
       setPickerError("Không thể mở camera lúc này.");
     }
@@ -360,7 +362,6 @@ export function ChatScreen({ navigation }: Props) {
       if (selected) {
         setText("");
         setImage(imageAfterRequest(selected, "success"));
-        setDiagnosisMode(false);
         await cleanupNormalizedImage(selected);
       }
       setFailed(undefined);
@@ -571,31 +572,13 @@ export function ChatScreen({ navigation }: Props) {
             busy={sending}
             onRetry={() => void retryFailed()}
             onReplace={() => {
-              setDiagnosisMode(true);
-              setSheetOpen(true);
+              void chooseGallery();
             }}
             onRemove={removeImage}
           />
         )}
-        {diagnosisMode && (
+        {(image || preparingImage) && (
           <View style={styles.diagnosisTray}>
-            <View style={styles.trayHeader}>
-              <View>
-                <Text style={styles.trayTitle}>Chẩn đoán ảnh</Text>
-                <Text style={styles.traySubtitle}>
-                  Ảnh được giữ lại nếu gửi thất bại
-                </Text>
-              </View>
-              <Pressable
-                accessibilityLabel="Tắt chẩn đoán"
-                onPress={() => {
-                  setDiagnosisMode(false);
-                  removeImage();
-                }}
-              >
-                <Ionicons name="close-circle" size={24} color={colors.muted} />
-              </Pressable>
-            </View>
             {image ? (
               <View testID="selected-image" style={styles.previewRow}>
                 <Image
@@ -606,7 +589,7 @@ export function ChatScreen({ navigation }: Props) {
                 <View style={styles.previewActions}>
                   <Pressable
                     accessibilityLabel="Đổi ảnh chẩn đoán"
-                    onPress={() => setSheetOpen(true)}
+                    onPress={() => void chooseGallery()}
                     style={styles.smallAction}
                   >
                     <Text style={styles.smallActionText}>Đổi ảnh</Text>
@@ -620,27 +603,10 @@ export function ChatScreen({ navigation }: Props) {
                   </Pressable>
                 </View>
               </View>
-            ) : (
-              <Pressable
-                accessibilityLabel="Chọn ảnh chẩn đoán"
-                testID="add-image"
-                onPress={() => setSheetOpen(true)}
-                style={styles.addImage}
-              >
-                <Ionicons
-                  name="camera-outline"
-                  size={21}
-                  color={colors.primary}
-                />
-                <Text style={styles.addImageText}>
-                  {preparingImage
-                    ? "Đang chuẩn hóa ảnh..."
-                    : "Chụp ảnh hoặc Chọn từ thư viện"}
-                </Text>
-              </Pressable>
-            )}
+            ) : <View style={styles.preparing}><ActivityIndicator color={colors.primary} /><Text style={styles.muted}>Đang chuẩn hóa ảnh...</Text></View>}
           </View>
         )}
+        {!!pickerError && !image && <View testID="picker-error" style={styles.pickerError}><Text accessibilityRole="alert" style={styles.loadError}>{pickerError}</Text>{pickerNeedsSettings ? <Pressable accessibilityRole="button" onPress={() => void Linking.openSettings()} style={styles.settingsButton}><Text style={styles.loadRetryText}>Mở cài đặt</Text></Pressable> : null}</View>}
         <View style={styles.composer}>
           <View
             ref={composerRef}
@@ -653,7 +619,7 @@ export function ChatScreen({ navigation }: Props) {
               onChangeText={setText}
               editable={!sending && !loading && !historyLoadError}
               placeholder={
-                diagnosisMode
+                image
                   ? "Thêm câu hỏi (không bắt buộc)..."
                   : "Nhắn tin cho MaiCare..."
               }
@@ -670,16 +636,16 @@ export function ChatScreen({ navigation }: Props) {
               <Pressable
                 testID="chat-send"
                 accessibilityLabel={image ? "Gửi chẩn đoán" : "Gửi"}
-                disabled={!canSend || (diagnosisMode && !image)}
+                disabled={!canSend}
                 onPress={() => void send()}
                 style={[
                   styles.send,
-                  diagnosisMode && styles.diagnosisSend,
-                  (!canSend || (diagnosisMode && !image)) &&
+                  image && styles.diagnosisSend,
+                  !canSend &&
                     styles.sendDisabled,
                 ]}
               >
-                {diagnosisMode ? (
+                {image ? (
                   <Text style={styles.diagnosisSendText}>Gửi chẩn đoán</Text>
                 ) : (
                   <Ionicons name="arrow-up" size={21} color="#fff" />
@@ -689,28 +655,14 @@ export function ChatScreen({ navigation }: Props) {
           </View>
         </View>
         </View>
-        {!diagnosisMode && !loading ? <FloatingCameraFab
+        {!image && !preparingImage && !loading ? <FloatingCameraFab
           bottomReserved={bottomPanelHeight}
           keyboardVisible={keyboardVisible}
           targetRef={diagnosisRef}
-          onCamera={() => { setDiagnosisMode(true); void takePhoto(); }}
-          onGallery={() => { setDiagnosisMode(true); void chooseGallery(); }}
+          onCamera={() => void takePhoto()}
+          onGallery={() => void chooseGallery()}
         /> : null}
       </KeyboardAvoidingView>
-      <ImageSourceSheet
-        visible={sheetOpen}
-        error={pickerError}
-        onOpenSettings={
-          openSettings ? () => void Linking.openSettings() : undefined
-        }
-        onCamera={() => void takePhoto()}
-        onLibrary={() => void chooseGallery()}
-        onClose={() => {
-          setSheetOpen(false);
-          setPickerError("");
-          setOpenSettings(false);
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -1085,26 +1037,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  trayHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  trayTitle: { color: colors.primaryDark, fontWeight: "900" },
-  traySubtitle: { color: colors.muted, fontSize: 12, marginTop: 2 },
-  addImage: {
-    minHeight: 46,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addImageText: { color: colors.primary, fontWeight: "800" },
+  preparing: { minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  pickerError: { minHeight: 48, marginHorizontal: spacing.md, marginBottom: 8, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: radius.md, backgroundColor: colors.dangerSoft },
+  settingsButton: { minHeight: 40, justifyContent: "center", paddingHorizontal: 8 },
   previewRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   preview: { width: 68, height: 68, borderRadius: 11 },
   previewActions: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 7 },

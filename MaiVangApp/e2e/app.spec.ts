@@ -59,13 +59,17 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   await expect(page.getByTestId('user-message').filter({ hasText: 'Khi nào nên bón phân cho mai?' })).toHaveCount(0);
 
   await page.getByRole('tab', { name: /Trò chuyện/ }).click(); await page.getByLabel('Cuộc trò chuyện mới').click(); await page.getByTestId('diagnosis-toggle').click();
+  await expect(page.getByTestId('diagnosis-toggle')).toHaveCount(1);
   await expect(page.getByTestId('camera-speed-dial')).toBeVisible();
+  await page.getByLabel('Đóng tùy chọn ảnh').click(); await expect(page.getByTestId('camera-speed-dial')).toHaveCount(0);
+  await page.getByTestId('diagnosis-toggle').click();
   await page.route('http://127.0.0.1:8010/api/v1/history/*/chat/image/', async route => {
     imageRequestObserved = true;
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Upstream diagnosis service unavailable during release regression.' }) });
   });
   const sampleImage = path.resolve(process.cwd(), '..', '..', 'reference', 'django-backend', 'diseases', '20260124_151321.jpg');
   const chooser = page.waitForEvent('filechooser'); await page.getByTestId('fab-gallery-option').click(); await (await chooser).setFiles(sampleImage); await expect(page.getByTestId('selected-image')).toBeVisible();
+  await expect(page.getByTestId('diagnosis-toggle')).toHaveCount(0); await expect(page.getByTestId('add-image')).toHaveCount(0); await expect(page.getByLabel('Tắt chẩn đoán')).toHaveCount(0);
   const diagnosisInput = page.getByPlaceholder('Thêm câu hỏi (không bắt buộc)...');
   await diagnosisInput.fill('Lá này có dấu hiệu gì?'); await page.getByTestId('chat-send').click();
   await expect.poll(async () => await page.getByTestId('request-error').isVisible().catch(() => false) || await page.getByTestId('assistant-message').count() > 0, { timeout: 180_000 }).toBe(true);
@@ -77,9 +81,6 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   } else {
     await expect(page.getByTestId('selected-image')).toHaveCount(0);
     await expect(page.getByPlaceholder('Nhắn tin cho MaiCare...')).toHaveValue('');
-  }
-  if (await page.getByLabel('Tắt chẩn đoán').isVisible().catch(() => false)) {
-    await page.getByLabel('Tắt chẩn đoán').click();
   }
   await page.getByPlaceholder('Nhắn tin cho MaiCare...').fill('Tôi nên xử lý bước đầu thế nào?'); await page.getByTestId('chat-send').click(); await waitForAnswerOrServiceError(1);
 

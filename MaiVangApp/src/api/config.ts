@@ -1,4 +1,4 @@
-export const PRODUCTION_API_BASE_URL = 'https://maivang-api-775925161402.asia-southeast1.run.app';
+export const PRODUCTION_API_BASE_URL = 'https://chat-bot-maivang-backend.onrender.com';
 const nativeBase = process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || PRODUCTION_API_BASE_URL;
 const webBridgeBase = process.env.EXPO_PUBLIC_WEB_API_BASE_URL?.trim() || nativeBase;
 const isDevelopmentWeb = typeof document !== 'undefined' && __DEV__;

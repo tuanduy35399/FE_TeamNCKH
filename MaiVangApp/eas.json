@@ -7,7 +7,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://maivang-api-775925161402.asia-southeast1.run.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://chat-bot-maivang-backend.onrender.com"
       },
       "android": {
         "buildType": "apk"
@@ -15,7 +15,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://maivang-api-775925161402.asia-southeast1.run.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://chat-bot-maivang-backend.onrender.com"
       },
       "android": {
         "buildType": "app-bundle"

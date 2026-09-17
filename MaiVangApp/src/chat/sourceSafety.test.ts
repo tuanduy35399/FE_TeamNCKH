@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -36,9 +36,9 @@ test('release configuration defaults to the deployed Django API only', () => {
   const bridge = readFileSync(path.join(process.cwd(), 'scripts', 'api-bridge.cjs'), 'utf8');
   const deployedWeb = readFileSync(path.join(process.cwd(), 'scripts', 'start-deployed-web.ps1'), 'utf8');
   const releaseSources = [config, eas, bridge, deployedWeb].join('\n');
-  assert.match(config, /https:\/\/maivang-api-775925161402\.asia-southeast1\.run\.app/);
-  assert.match(eas, /EXPO_PUBLIC_API_BASE_URL[\s\S]*maivang-api-775925161402\.asia-southeast1\.run\.app/);
-  assert.doesNotMatch(releaseSources, /chat-bot-maivang-backend\.onrender\.com|chat-service-nckh\.onrender\.com/);
+  assert.match(config, /https:\/\/chat-bot-maivang-backend\.onrender\.com/);
+  assert.match(eas, /EXPO_PUBLIC_API_BASE_URL[\s\S]*chat-bot-maivang-backend\.onrender\.com/);
+  assert.doesNotMatch(releaseSources, /asia-southeast1\.run\.app|chat-service-nckh\.onrender\.com/);
   const timeout = Number(config.match(/IMAGE_TIMEOUT_MS\s*=\s*([\d_]+)/)?.[1]?.replaceAll('_', ''));
   assert.ok(timeout >= 120_000 && timeout <= 180_000);
   assert.doesNotMatch(config, /chat-service-nckh|\/chat\/image/);
@@ -60,7 +60,7 @@ test('one shared session store atomically loads history before navigation and gu
 test('final diagnosis entry is one adaptive camera speed dial with only API-backed bbox geometry', () => {
   const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
   const fab = readFileSync(path.join(process.cwd(), 'src', 'components', 'FloatingCameraFab.tsx'), 'utf8');
-  const sourceSheet = readFileSync(path.join(process.cwd(), 'src', 'screens', 'diagnosis', 'ImageSourceSheet.tsx'), 'utf8');
+  const sourceSheetPath = path.join(process.cwd(), 'src', 'screens', 'diagnosis', 'ImageSourceSheet.tsx');
   assert.match(fab, /floatingFabBottom/);
   assert.match(fab, /bottomReserved/);
   assert.match(fab, /Animated\.spring/);
@@ -70,8 +70,9 @@ test('final diagnosis entry is one adaptive camera speed dial with only API-back
   assert.match(fab, /Mẹo chụp ảnh rõ/);
   assert.match(fab, /Chọn từ thư viện/);
   assert.match(fab, /Chụp ảnh/);
-  assert.match(sourceSheet, /testID="camera-option"/);
-  assert.match(sourceSheet, /testID="library-option"/);
+  assert.match(fab, /BackHandler\.addEventListener\('hardwareBackPress'/);
+  assert.equal(existsSync(sourceSheetPath), false);
+  assert.doesNotMatch(chat, /ImageSourceSheet|sheetOpen|diagnosisMode|testID="add-image"/);
   assert.doesNotMatch(chat + fab, /scan-outline/);
   assert.match(chat, /bbox_xyxy/);
   assert.match(chat, /scaleContainedBoundingBox/);
