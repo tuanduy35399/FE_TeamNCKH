@@ -1,9 +1,9 @@
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { Detection, SelectedImage } from '../types/domain';
+import { diagnosisMetadataStorageKey, safeUserId } from '../storage/keys';
 
 const VERSION = 1;
-const META_PREFIX = `maicare_image_history_v${VERSION}`;
 const DB_NAME = 'maicare-image-history';
 const STORE_NAME = 'images';
 
@@ -25,9 +25,12 @@ export type LocalImageHistory = {
   transientImageUri?: boolean;
 };
 
-function metadataKey(userId: number) { return `${META_PREFIX}:${userId}`; }
-function nativeDirectory(userId: number) { return `${FileSystem.documentDirectory}maicare-history-v${VERSION}/${userId}/`; }
-function nativeMetadataPath(userId: number) { return `${nativeDirectory(userId)}metadata.json`; }
+function metadataKey(userId: number) { return diagnosisMetadataStorageKey(userId); }
+function nativeDirectory(userId: number) {
+  const safe = safeUserId(userId);
+  return safe && FileSystem.documentDirectory ? `${FileSystem.documentDirectory}maicare-history-v${VERSION}/${safe}/` : null;
+}
+function nativeMetadataPath(userId: number) { const directory = nativeDirectory(userId); return directory ? `${directory}metadata.json` : null; }
 function imageKey(record: Pick<LocalImageHistory, 'userId' | 'conversationId' | 'turnKey'>) {
   return `${record.userId}:${record.conversationId}${record.turnKey ? `:${record.turnKey}` : ''}`;
 }
@@ -43,8 +46,11 @@ function validRecords(value: unknown, userId: number): LocalImageHistory[] {
 
 async function readMetadata(userId: number): Promise<LocalImageHistory[]> {
   try {
-    if (Platform.OS === 'web') return validRecords(JSON.parse(globalThis.localStorage?.getItem(metadataKey(userId)) || '[]'), userId);
+    const key = metadataKey(userId);
+    if (!key) return [];
+    if (Platform.OS === 'web') return validRecords(JSON.parse(globalThis.localStorage?.getItem(key) || '[]'), userId);
     const path = nativeMetadataPath(userId);
+    if (!path) return [];
     const info = await FileSystem.getInfoAsync(path);
     if (!info.exists) return [];
     return validRecords(JSON.parse(await FileSystem.readAsStringAsync(path)), userId);
@@ -52,13 +58,17 @@ async function readMetadata(userId: number): Promise<LocalImageHistory[]> {
 }
 
 async function writeMetadata(userId: number, records: LocalImageHistory[]) {
+  const key = metadataKey(userId);
+  if (!key) return;
   if (Platform.OS === 'web') {
-    globalThis.localStorage?.setItem(metadataKey(userId), JSON.stringify(records));
+    globalThis.localStorage?.setItem(key, JSON.stringify(records));
     return;
   }
   const directory = nativeDirectory(userId);
+  const path = nativeMetadataPath(userId);
+  if (!directory || !path) return;
   await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
-  await FileSystem.writeAsStringAsync(nativeMetadataPath(userId), JSON.stringify(records));
+  await FileSystem.writeAsStringAsync(path, JSON.stringify(records));
 }
 
 function openImageDb(): Promise<IDBDatabase> {
@@ -115,6 +125,7 @@ export async function saveLocalImageHistory(input: {
   userId: number; conversationId: number; title: string; description?: string; detections: Detection[]; image: SelectedImage;
   userMessageId?: number; assistantMessageId?: number;
 }) {
+  if (!safeUserId(input.userId) || !Number.isInteger(input.conversationId) || input.conversationId <= 0) return;
   const turnKey = String(input.assistantMessageId ?? input.userMessageId ?? Date.now());
   const key = `${input.userId}:${input.conversationId}:${turnKey}`;
   let storedImageUri: string | undefined;
@@ -123,6 +134,7 @@ export async function saveLocalImageHistory(input: {
     await putWebImage(key, blob);
   } else {
     const directory = nativeDirectory(input.userId);
+    if (!directory) return;
     await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
     storedImageUri = `${directory}${input.conversationId}-${turnKey}.${extensionFor(input.image)}`;
     await FileSystem.copyAsync({ from: input.image.uri, to: storedImageUri });
@@ -155,14 +167,18 @@ export async function getLocalImageHistoryItems(userId: number, conversationId: 
 }
 
 export async function clearLocalImageHistoryForUser(userId: number) {
+  const key = metadataKey(userId);
+  if (!key) return;
   const records = await readMetadata(userId);
   if (Platform.OS === 'web') {
     await Promise.all(records.flatMap(record => [
       deleteWebImage(imageKey(record)).catch(() => undefined),
       deleteWebImage(`${userId}:${record.conversationId}`).catch(() => undefined),
     ]));
-    globalThis.localStorage?.removeItem(metadataKey(userId));
+    globalThis.localStorage?.removeItem(key);
     return;
   }
-  await FileSystem.deleteAsync(nativeDirectory(userId), { idempotent: true });
+  const directory = nativeDirectory(userId);
+  if (!directory) return;
+  await FileSystem.deleteAsync(directory, { idempotent: true });
 }

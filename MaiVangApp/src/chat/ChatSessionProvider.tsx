@@ -3,9 +3,9 @@ import { getHistoryDetail } from '../api/history';
 import { ApiError } from '../api/errors';
 import { useAuth } from '../auth/AuthProvider';
 import { getLocalImageHistoryItems } from '../history/imageHistory';
-import { mergeLocalImageTurns } from '../history/imageHistoryMerge';
 import type { ChatMessage } from '../types/domain';
 import { loadActiveHistoryId, saveActiveHistoryId } from './storage';
+import { safelyEnrichServerMessages } from './historyEnrichment';
 
 type SessionContext = {
   currentHistoryId: number | null;
@@ -73,14 +73,15 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
       if (!isCurrentGeneration(token)) return false;
       setCurrentHistoryId(detail.id);
       setHistoryTitle(detail.title || 'Cuộc trò chuyện');
-      setMessages(detail.messages || []);
+      const serverMessages = detail.messages || [];
+      setMessages(serverMessages);
       if (account?.id) {
         void saveActiveHistoryId(account.id, detail.id);
-        void getLocalImageHistoryItems(account.id, id).then(metadata => {
-          if (isCurrentGeneration(token) && metadata.length) {
-            setMessages(current => mergeLocalImageTurns(current, metadata));
-          }
-        }).catch(() => undefined);
+        void safelyEnrichServerMessages(serverMessages, () => getLocalImageHistoryItems(account.id, id), error => {
+          if (typeof __DEV__ !== 'undefined' && __DEV__) console.warn('[MaiCare local history enrichment skipped]', { historyId: id, reason: error instanceof Error ? error.message : 'storage error' });
+        }).then(enriched => {
+          if (isCurrentGeneration(token) && enriched !== serverMessages) setMessages(enriched);
+        });
       }
       return true;
     } catch (error) {

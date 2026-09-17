@@ -30,11 +30,21 @@ export function HistoryScreen() {
     try {
       const serverItems = await getHistory();
       if (typeof __DEV__ !== 'undefined' && __DEV__) console.info('[MaiCare history list]', { status: 200, count: serverItems.length });
-      const localById = new Map((account?.id ? await getLocalImageHistory(account.id) : []).map(item => [item.conversationId, item]));
-      setItems(serverItems.map(item => {
-        const metadata = localById.get(item.id);
-        return metadata ? { ...item, kind: 'image' as const, description: metadata.description, detections: metadata.detections } : { ...item, kind: 'text' as const };
-      }));
+      setItems(serverItems.map(item => ({ ...item, kind: 'text' as const })));
+      // The server list is authoritative. Local metadata must never keep it hidden.
+      setLoading(false);
+      setRefreshing(false);
+      if (account?.id) {
+        try {
+          const localById = new Map((await getLocalImageHistory(account.id)).map(item => [item.conversationId, item]));
+          setItems(serverItems.map(item => {
+            const metadata = localById.get(item.id);
+            return metadata ? { ...item, kind: 'image' as const, description: metadata.description, detections: metadata.detections } : { ...item, kind: 'text' as const };
+          }));
+        } catch (storageError) {
+          if (typeof __DEV__ !== 'undefined' && __DEV__) console.warn('[MaiCare local history list enrichment skipped]', { reason: storageError instanceof Error ? storageError.message : 'storage error' });
+        }
+      }
     }
     catch { setError('Chưa thể tải lịch sử. Vui lòng thử lại.'); }
     finally { setLoading(false); setRefreshing(false); }

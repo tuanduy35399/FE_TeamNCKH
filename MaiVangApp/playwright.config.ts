@@ -15,7 +15,7 @@ export default defineConfig({
   },
   use: {
     baseURL: 'http://localhost:5175',
-    channel: 'msedge',
+    browserName: 'chromium',
     viewport: { width: 390, height: 844 },
     headless: true,
     trace: 'retain-on-failure',

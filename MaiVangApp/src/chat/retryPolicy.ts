@@ -16,3 +16,7 @@ export function preserveFailedRequest(input: Omit<FailedRequestState, 'historyId
 export function retryUsesHistory(failed: FailedRequestState): number | undefined {
   return failed.historyId;
 }
+
+export function shouldCooldownImageRetry(status?: number): boolean {
+  return status !== undefined && [500, 502, 503, 504].includes(status);
+}

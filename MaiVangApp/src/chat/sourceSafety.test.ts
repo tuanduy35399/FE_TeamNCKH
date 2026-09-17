@@ -51,7 +51,7 @@ test('one shared session store atomically loads history before navigation and gu
   assert.match(provider, /detail\.id !== id/);
   assert.match(provider, /!isCurrentGeneration\(token\)/);
   assert.match(provider, /setCurrentHistoryId\(id\)[\s\S]*setMessages\(\[\]\)[\s\S]*getHistoryDetail\(id\)/);
-  assert.match(provider, /setMessages\(detail\.messages \|\| \[\]\)[\s\S]*getLocalImageHistoryItems/);
+  assert.match(provider, /setMessages\(serverMessages\)[\s\S]*safelyEnrichServerMessages/);
   assert.match(history, /const opened = await openHistory\(item\.id\)[\s\S]*if \(opened\) navigation\.navigate\('Chat'\)/);
   assert.doesNotMatch(chat, /route\.params|setMessages\(\[\]\).*focus/);
   assert.match(chat, /conversationRevision[\s\S]*releaseSubmissionLock\(sendLocked\)/);
@@ -77,4 +77,23 @@ test('final diagnosis entry is one adaptive camera speed dial with only API-back
   assert.match(chat, /bbox_xyxy/);
   assert.match(chat, /scaleContainedBoundingBox/);
   assert.doesNotMatch(chat, /bbox:\s*\[[\d\s,.]+\]/);
+});
+
+test('SecureStore is restricted to fixed auth keys and history uses AsyncStorage', () => {
+  const auth = readFileSync(path.join(process.cwd(), 'src', 'auth', 'storage.ts'), 'utf8');
+  const chat = readFileSync(path.join(process.cwd(), 'src', 'chat', 'storage.ts'), 'utf8');
+  const tutorial = readFileSync(path.join(process.cwd(), 'src', 'tutorial', 'storage.ts'), 'utf8');
+  const history = readFileSync(path.join(process.cwd(), 'src', 'history', 'imageHistory.ts'), 'utf8');
+  assert.match(auth, /AUTH_STORAGE_KEYS\.(?:access|refresh|user|legacySession)/);
+  assert.doesNotMatch(auth, /SecureStore\.(?:setItemAsync|getItemAsync|deleteItemAsync)\(`|SecureStore\.(?:setItemAsync|getItemAsync|deleteItemAsync)\([^A]/);
+  assert.match(chat, /@react-native-async-storage\/async-storage/);
+  assert.match(tutorial, /@react-native-async-storage\/async-storage/);
+  assert.doesNotMatch(chat + tutorial + history, /expo-secure-store|SecureStore/);
+});
+
+test('failed image state has one coherent action panel and suppresses duplicate staging actions', () => {
+  const chat = readFileSync(path.join(process.cwd(), 'src', 'screens', 'chat', 'ChatScreen.tsx'), 'utf8');
+  assert.match(chat, /failed\?\.kind !== "image"[\s\S]*testID="selected-image"/);
+  assert.match(chat, /testID="failed-image-panel"/);
+  assert.match(chat, /shouldCooldownImageRetry/);
 });

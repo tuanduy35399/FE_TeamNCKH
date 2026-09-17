@@ -1,12 +1,8 @@
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { isTutorialCompletedWith, saveTutorialCompletedWith, type TutorialStorage } from './storageCore';
 
-const defaultStorage: TutorialStorage = {
-  getItem: key => Platform.OS === 'web' ? globalThis.localStorage?.getItem(key) : SecureStore.getItemAsync(key),
-  setItem: (key, value) => Platform.OS === 'web' ? globalThis.localStorage?.setItem(key, value) : SecureStore.setItemAsync(key, value),
-};
+const defaultStorage: TutorialStorage = AsyncStorage;
 
 export async function isTutorialCompleted(storage: TutorialStorage = defaultStorage): Promise<boolean> {
   return isTutorialCompletedWith(storage);

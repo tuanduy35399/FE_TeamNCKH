@@ -38,6 +38,7 @@ import {
 import {
   preserveFailedRequest,
   retryUsesHistory,
+  shouldCooldownImageRetry,
   type FailedRequestState,
 } from "../../chat/retryPolicy";
 import {
@@ -141,6 +142,8 @@ export function ChatScreen({ navigation }: Props) {
   const [sending, setSending] = useState(false);
   const [uploadStage, setUploadStage] = useState<UploadStage>();
   const [failed, setFailed] = useState<FailedRequestState>();
+  const [retryCoolingDown, setRetryCoolingDown] = useState(false);
+  const retryCooldownTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sendLocked = useRef(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const messageAreaRef = useRef<View>(null);
@@ -174,6 +177,7 @@ export function ChatScreen({ navigation }: Props) {
     });
     return () => subscription.remove();
   }, [image, sending]);
+  useEffect(() => () => { if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current); }, []);
   useEffect(() => {
     releaseSubmissionLock(sendLocked);
     setSending(false);
@@ -181,9 +185,16 @@ export function ChatScreen({ navigation }: Props) {
     setText('');
     setImage(current => { void cleanupNormalizedImage(current); return undefined; });
     setFailed(undefined);
+    setRetryCoolingDown(false);
+    if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
     setPickerError('');
     setPickerNeedsSettings(false);
   }, [conversationRevision]);
+  function startRetryCooldown() {
+    if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
+    setRetryCoolingDown(true);
+    retryCooldownTimer.current = setTimeout(() => setRetryCoolingDown(false), 2500);
+  }
   function newChat() {
     const previousImage = image;
     resetSession();
@@ -205,6 +216,7 @@ export function ChatScreen({ navigation }: Props) {
       setImage(await normalizeImageForUpload(selectedAsset(asset)));
       await cleanupNormalizedImage(previous);
       setFailed(undefined);
+      setRetryCoolingDown(false);
     } catch {
       setPickerError(
         "Không thể chuẩn hóa ảnh này. Vui lòng chọn ảnh JPG hoặc PNG khác.",
@@ -365,6 +377,8 @@ export function ChatScreen({ navigation }: Props) {
         await cleanupNormalizedImage(selected);
       }
       setFailed(undefined);
+      setRetryCoolingDown(false);
+      if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
     } catch (value) {
       if (!isCurrentGeneration(token)) return;
       const error =
@@ -384,6 +398,7 @@ export function ChatScreen({ navigation }: Props) {
           /* Keep optimistic turn when reconciliation is unavailable. */
         }
       setImage(imageAfterRequest(selected, "failed"));
+      if (selected && shouldCooldownImageRetry(error.status)) startRetryCooldown();
       setFailed(
         preserveFailedRequest(
           {
@@ -406,7 +421,7 @@ export function ChatScreen({ navigation }: Props) {
     }
   }
   async function retryFailed() {
-    if (!failed || sending) return;
+    if (!failed || sending || retryCoolingDown) return;
     try {
       if (!failed.historyId) throw new Error("No server history exists yet");
       const before = await getHistoryDetail(failed.historyId);
@@ -418,6 +433,8 @@ export function ChatScreen({ navigation }: Props) {
             : before.messages || [],
         );
         setFailed(undefined);
+        setRetryCoolingDown(false);
+        if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
         if (failed.kind === "image") setImage(undefined);
         return;
       }
@@ -436,11 +453,14 @@ export function ChatScreen({ navigation }: Props) {
     !sending &&
     !preparingImage &&
     !loading &&
-    !historyLoadError;
+    !historyLoadError &&
+    !failed;
   function removeImage() {
     const current = image;
     setImage(undefined);
     setFailed(undefined);
+    setRetryCoolingDown(false);
+    if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
     void cleanupNormalizedImage(current);
   }
   return (
@@ -535,7 +555,7 @@ export function ChatScreen({ navigation }: Props) {
                 messages.length &&
                 listRef.current?.scrollToEnd({ animated: false })
               }
-              ListEmptyComponent={<Welcome onSelect={setText} />}
+              ListEmptyComponent={historyId ? <View testID="empty-history" style={styles.trueEmpty}><Ionicons name="chatbubble-outline" size={28} color={colors.muted} /><Text style={styles.muted}>Cuộc trò chuyện này chưa có tin nhắn.</Text></View> : <Welcome onSelect={setText} />}
               renderItem={({ item, index }) => (
                 <MessageBubble
                   busy={sending}
@@ -570,6 +590,7 @@ export function ChatScreen({ navigation }: Props) {
           <RequestError
             failed={failed}
             busy={sending}
+            coolingDown={retryCoolingDown}
             onRetry={() => void retryFailed()}
             onReplace={() => {
               void chooseGallery();
@@ -577,7 +598,7 @@ export function ChatScreen({ navigation }: Props) {
             onRemove={removeImage}
           />
         )}
-        {(image || preparingImage) && (
+        {(image || preparingImage) && failed?.kind !== "image" && (
           <View style={styles.diagnosisTray}>
             {image ? (
               <View testID="selected-image" style={styles.previewRow}>
@@ -617,7 +638,7 @@ export function ChatScreen({ navigation }: Props) {
             <TextInput
               value={text}
               onChangeText={setText}
-              editable={!sending && !loading && !historyLoadError}
+              editable={!sending && !loading && !historyLoadError && !failed}
               placeholder={
                 image
                   ? "Thêm câu hỏi (không bắt buộc)..."
@@ -803,12 +824,14 @@ function DiagnosedImage({ message }: { message: ChatMessage }) {
 function RequestError({
   failed,
   busy,
+  coolingDown,
   onRetry,
   onReplace,
   onRemove,
 }: {
   failed: FailedRequestState;
   busy: boolean;
+  coolingDown: boolean;
   onRetry: () => void;
   onReplace: () => void;
   onRemove: () => void;
@@ -823,9 +846,10 @@ function RequestError({
         <Ionicons name="alert-circle-outline" size={19} color={colors.danger} />
         <Text style={styles.errorText}>{failed.message}</Text>
       </View>
+      {failed.kind === "image" && failed.image ? <View testID="failed-image-panel" style={styles.failedImageRow}><Image source={{ uri: failed.image.uri }} resizeMode="cover" style={styles.failedImage} /><Text numberOfLines={3} style={styles.failedQuestion}>{failed.question || "Hãy phân tích tình trạng cây mai trong ảnh."}</Text></View> : null}
       <View style={styles.errorActions}>
-        <Pressable disabled={busy} onPress={onRetry} style={styles.retry}>
-          <Text style={styles.retryText}>Thử lại</Text>
+        <Pressable disabled={busy || coolingDown} onPress={onRetry} style={[styles.retry, (busy || coolingDown) && styles.sendDisabled]}>
+          <Text style={styles.retryText}>{coolingDown ? "Chờ một chút..." : "Thử lại"}</Text>
         </Pressable>
         {failed.kind === "image" && (
           <>
@@ -1013,6 +1037,9 @@ const styles = StyleSheet.create({
   errorLine: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   errorText: { flex: 1, color: colors.danger, fontSize: 13, lineHeight: 18 },
   errorActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  failedImageRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  failedImage: { width: 58, height: 58, borderRadius: 10 },
+  failedQuestion: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 18 },
   retry: {
     minHeight: 38,
     justifyContent: "center",
@@ -1037,6 +1064,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  trueEmpty: { flex: 1, minHeight: 180, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
   preparing: { minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   pickerError: { minHeight: 48, marginHorizontal: spacing.md, marginBottom: 8, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: radius.md, backgroundColor: colors.dangerSoft },
   settingsButton: { minHeight: 40, justifyContent: "center", paddingHorizontal: 8 },

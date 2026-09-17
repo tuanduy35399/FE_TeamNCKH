@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
 import path from 'node:path';
 
+const deployedApi = 'https://chat-bot-maivang-backend.onrender.com';
 let cleanupCredentials: { username: string; password: string } | undefined;
 test.afterEach(async ({ request }) => {
   if (!cleanupCredentials) return;
-  const login = await request.post('http://127.0.0.1:8010/api/v1/user/login/', { data: cleanupCredentials, timeout: 60_000 }).catch(() => undefined);
+  const login = await request.post(`${deployedApi}/api/v1/user/login/`, { data: cleanupCredentials, timeout: 60_000 }).catch(() => undefined);
   if (login?.ok()) {
     const tokens = await login.json() as { access?: string };
-    if (tokens.access) await request.delete('http://127.0.0.1:8010/api/v1/user/me/', { headers: { Authorization: `Bearer ${tokens.access}` }, timeout: 60_000 }).catch(() => undefined);
+    if (tokens.access) await request.delete(`${deployedApi}/api/v1/user/me/`, { headers: { Authorization: `Bearer ${tokens.access}` }, timeout: 60_000 }).catch(() => undefined);
   }
   cleanupCredentials = undefined;
 });
@@ -23,7 +24,7 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
     await expect.poll(async () => await page.getByTestId('assistant-message').count() >= minimumAnswers || await page.getByRole('alert').isVisible().catch(() => false), { timeout: 180_000 }).toBe(true);
   };
 
-  const registration = await request.post('http://127.0.0.1:8010/api/v1/user/register/', { data: { username, name: 'Người dùng kiểm thử', email: `${username}@local.test`, password }, timeout: 120_000 });
+  const registration = await request.post(`${deployedApi}/api/v1/user/register/`, { data: { username, name: 'Người dùng kiểm thử', email: `${username}@local.test`, password }, timeout: 120_000 });
   expect(registration.status()).toBe(201);
   await page.goto('/'); await expect(page.getByTestId('login-screen')).toBeVisible();
   await page.getByTestId('login-username').fill(username); await page.getByTestId('login-password').fill(password); await page.getByTestId('login-submit').click(); await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 45_000 });
@@ -33,7 +34,7 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   await expect(page.getByText('1 / 7', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Bỏ qua hướng dẫn' }).click();
   await expect(page.getByTestId('tutorial-overlay')).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('maicare_tutorial_v3_completed'))).toBe('true');
+  expect(await page.evaluate(() => localStorage.getItem('@maicare/tutorial/v3/completed'))).toBe('true');
 
   await expect(page.getByTestId('add-image')).toHaveCount(0);
   const textComposer = page.getByPlaceholder('Nhắn tin cho MaiCare...');
@@ -58,6 +59,19 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   await expect(page.getByTestId('user-message').filter({ hasText: 'Cách chăm mai sau Tết?' })).toBeVisible({ timeout: 45_000 });
   await expect(page.getByTestId('user-message').filter({ hasText: 'Khi nào nên bón phân cho mai?' })).toHaveCount(0);
 
+  const apiLogin = await request.post(`${deployedApi}/api/v1/user/login/`, { data: { username, password }, timeout: 60_000 });
+  expect(apiLogin.ok()).toBe(true);
+  const apiTokens = await apiLogin.json() as { access: string };
+  const emptyTitle = `E2E empty ${suffix}`;
+  const emptyCreate = await request.post(`${deployedApi}/api/v1/history/`, { data: { title: emptyTitle }, headers: { Authorization: `Bearer ${apiTokens.access}` }, timeout: 60_000 });
+  expect(emptyCreate.status()).toBe(201);
+  await page.getByRole('tab', { name: /Lịch sử/ }).click();
+  const emptyHistory = page.getByRole('button').filter({ hasText: emptyTitle }).first();
+  await expect(emptyHistory).toBeVisible({ timeout: 45_000 });
+  await emptyHistory.click();
+  await expect(page.getByTestId('empty-history')).toContainText('Cuộc trò chuyện này chưa có tin nhắn.');
+  await expect(page.getByPlaceholder('Nhắn tin cho MaiCare...')).toBeVisible();
+
   await page.getByRole('tab', { name: /Trò chuyện/ }).click(); await page.getByLabel('Cuộc trò chuyện mới').click(); await page.getByTestId('diagnosis-toggle').click();
   await expect(page.getByTestId('diagnosis-toggle')).toHaveCount(1);
   await expect(page.getByTestId('camera-speed-dial')).toBeVisible();
@@ -74,8 +88,11 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   await diagnosisInput.fill('Lá này có dấu hiệu gì?'); await page.getByTestId('chat-send').click();
   await expect.poll(async () => await page.getByTestId('request-error').isVisible().catch(() => false) || await page.getByTestId('assistant-message').count() > 0, { timeout: 180_000 }).toBe(true);
   if (await page.getByTestId('request-error').isVisible().catch(() => false)) {
-    await expect(page.getByTestId('selected-image')).toBeVisible();
-    await expect(diagnosisInput).toHaveValue('Lá này có dấu hiệu gì?');
+    await expect(page.getByTestId('failed-image-panel')).toBeVisible();
+    await expect(page.getByTestId('selected-image')).toHaveCount(0);
+    await expect(page.getByTestId('request-error').getByText('Lá này có dấu hiệu gì?', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('request-error').getByText('Đổi ảnh', { exact: true })).toHaveCount(1);
+    await expect(page.getByTestId('request-error').getByText('Xóa ảnh', { exact: true })).toHaveCount(1);
     await expect(page.getByText('Không phát hiện rõ lớp bệnh trong ảnh.')).toHaveCount(0);
     await page.getByTestId('request-error').getByText('Xóa ảnh', { exact: true }).click();
   } else {
