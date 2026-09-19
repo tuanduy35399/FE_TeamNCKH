@@ -13,7 +13,7 @@ const messages: ChatMessage[] = Array.from({ length: 11 }, (_, index) => ({
 test('history 150 renders all 11 server messages when local enrichment throws', async () => {
   const failures: unknown[] = [];
   const result = await safelyEnrichServerMessages(messages, async () => {
-    throw new Error('Invalid key provided to SecureStore.');
+    throw new Error('Local diagnosis metadata is unavailable.');
   }, error => failures.push(error));
   assert.strictEqual(result, messages);
   assert.equal(result.length, 11);
