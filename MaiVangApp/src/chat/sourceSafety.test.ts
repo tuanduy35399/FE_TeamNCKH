@@ -30,15 +30,15 @@ test('legacy floating gear is absent and debug logging cannot include auth secre
   }
 });
 
-test('release configuration defaults to the deployed Django API only', () => {
+test('release configuration is local-first and has no cloud backend dependency', () => {
   const config = readFileSync(path.join(process.cwd(), 'src', 'api', 'config.ts'), 'utf8');
   const eas = readFileSync(path.join(process.cwd(), 'eas.json'), 'utf8');
   const bridge = readFileSync(path.join(process.cwd(), 'scripts', 'api-bridge.cjs'), 'utf8');
   const deployedWeb = readFileSync(path.join(process.cwd(), 'scripts', 'start-deployed-web.ps1'), 'utf8');
   const releaseSources = [config, eas, bridge, deployedWeb].join('\n');
-  assert.match(config, /https:\/\/chat-bot-maivang-backend\.onrender\.com/);
-  assert.match(eas, /EXPO_PUBLIC_API_BASE_URL[\s\S]*chat-bot-maivang-backend\.onrender\.com/);
-  assert.doesNotMatch(releaseSources, /asia-southeast1\.run\.app|chat-service-nckh\.onrender\.com/);
+  assert.match(config, /BUILD_API_BASE_URL/);
+  assert.match(eas, /EXPO_PUBLIC_API_BASE_URL/);
+  assert.doesNotMatch(config + bridge + deployedWeb, /onrender\.com|run\.app/);
   const timeout = Number(config.match(/IMAGE_TIMEOUT_MS\s*=\s*([\d_]+)/)?.[1]?.replaceAll('_', ''));
   assert.ok(timeout >= 120_000 && timeout <= 180_000);
   assert.doesNotMatch(config, /chat-service-nckh|\/chat\/image/);

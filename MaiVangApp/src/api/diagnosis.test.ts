@@ -3,6 +3,9 @@ import test from 'node:test';
 import { submitDiagnosis } from './diagnosis';
 import { ApiError } from './errors';
 import { getHistory, getHistoryDetail, nativeImageDescriptor, sendHistoryImage } from './history';
+import { setRuntimeApiBaseUrl } from './config';
+
+setRuntimeApiBaseUrl('http://local.test');
 
 const timestamp = '2026-09-03T10:00:00Z';
 const historyDto = (id: number, title = 'MaiCare conversation', updatedAt = timestamp) => ({

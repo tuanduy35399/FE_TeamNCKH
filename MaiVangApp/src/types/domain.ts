@@ -6,7 +6,8 @@ export type SelectedImage = {
 };
 export type DiseaseDetail = { id: number; name: string; information: string; imageUrl?: string };
 export type BoundingBox = [number, number, number, number];
-export type Detection = { label?: string; confidence?: number; bbox?: BoundingBox; classId?: number; diseaseName?: string };
+export type Detection = { label?: string; confidence?: number; bbox?: BoundingBox; classId?: number; diseaseName?: string; metadata?: Record<string, unknown> };
+export type ChatResult = { historyId: number; question: string; answer: string; detections: Detection[]; metadata?: Record<string, unknown> };
 export type DiagnosisResult = { answer: string; conversationId: number; detections: Detection[]; originalImageUri?: string };
 export type ChatMessage = { id: number; role: 'user' | 'assistant' | 'error' | string; content: string; createdAt: string; imageUri?: string; imageWidth?: number; imageHeight?: number; detections?: Detection[]; sourceQuestion?: string };
 export type HistoryItem = {

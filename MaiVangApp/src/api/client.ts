@@ -1,10 +1,14 @@
-import { API_BASE_URL, AUTH_TIMEOUT_MS } from './config';
+import { AUTH_TIMEOUT_MS, getApiBaseUrl } from './config';
 import { ApiError, apiMessage, fieldErrorsFromPayload, safeDebugDetail, transportDiagnostics } from './errors';
 import type { Session } from '../types/domain';
 import { AUTH_ENDPOINTS } from './endpoints';
 type SessionHooks = { getSession: () => Session | null; updateSession: (session: Session) => Promise<void>; invalidate: (message?: string) => Promise<void> };
 let hooks: SessionHooks | null = null;
 let refreshPromise: Promise<string> | null = null;
+const activeControllers = new Set<AbortController>();
+const activeUploadCancellations = new Set<() => void>();
+let backendGeneration = 0;
+export function invalidateApiRequests() { backendGeneration += 1; activeControllers.forEach(controller => controller.abort()); activeUploadCancellations.forEach(cancel => cancel()); activeControllers.clear(); activeUploadCancellations.clear(); refreshPromise = null; }
 export function configureApiSession(next: SessionHooks | null) { hooks = next; }
 async function parseResponse(response: Response): Promise<unknown> {
   const text = await response.text();
@@ -35,9 +39,10 @@ async function refreshAccessToken(): Promise<string> {
   const session = hooks?.getSession();
   if (!session?.refreshToken) throw new ApiError('Phiên đăng nhập đã hết hạn.', 401);
   const controller = new AbortController();
+  activeControllers.add(controller);
   const timeout = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
   try {
-    const response = await fetch(`${API_BASE_URL}${AUTH_ENDPOINTS.refresh}`, {
+    const response = await fetch(`${getApiBaseUrl()}${AUTH_ENDPOINTS.refresh}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh: session.refreshToken }), signal: controller.signal,
     });
     const payload = await parseResponse(response) as { access?: unknown; refresh?: unknown } | null;
@@ -49,13 +54,15 @@ async function refreshAccessToken(): Promise<string> {
     if (error instanceof ApiError) throw error;
     if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', undefined, undefined, 'timeout', undefined, transportDiagnostics(error, true));
     throw new ApiError('Không thể kết nối máy chủ. Kiểm tra kết nối và thử lại.', undefined, undefined, 'network', undefined, transportDiagnostics(error));
-  } finally { clearTimeout(timeout); }
+  } finally { clearTimeout(timeout); activeControllers.delete(controller); }
 }
 type ApiRequestOptions = RequestInit & { auth?: boolean; timeoutMs?: number; retryAuth?: boolean };
 const RETRYABLE_GET_STATUSES = new Set([502, 503, 504]);
 const retryDelay = (attempt: number) => new Promise(resolve => setTimeout(resolve, attempt * 900));
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const controller = new AbortController();
+  activeControllers.add(controller);
+  const generation = backendGeneration;
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? AUTH_TIMEOUT_MS);
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
@@ -65,17 +72,18 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
   try {
     const { auth: _auth, retryAuth: _retryAuth, timeoutMs: _timeoutMs, ...fetchOptions } = options;
-    let response = await fetch(`${API_BASE_URL}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+    const baseUrl = getApiBaseUrl();
+    let response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
     const method = (fetchOptions.method || 'GET').toUpperCase();
     for (let attempt = 1; method === 'GET' && RETRYABLE_GET_STATUSES.has(response.status) && attempt <= 2; attempt += 1) {
       await retryDelay(attempt);
-      response = await fetch(`${API_BASE_URL}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+      response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
     }
     if (response.status === 401 && options.auth && options.retryAuth !== false && hooks) {
       try {
         refreshPromise ||= refreshAccessToken().finally(() => { refreshPromise = null; });
         headers.set('Authorization', `Bearer ${await refreshPromise}`);
-        response = await fetch(`${API_BASE_URL}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+        response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
       } catch (error) {
         if (error instanceof ApiError && (error.kind === 'network' || error.kind === 'timeout')) throw error;
         await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
@@ -86,6 +94,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
       await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
     }
+    if (generation !== backendGeneration) throw new ApiError('Yêu cầu đã được hủy vì máy chủ đã thay đổi.', undefined, undefined, 'network');
     const payload = await parseResponse(response);
     if (!response.ok) {
       logValidation(response.status, path, payload);
@@ -96,28 +105,31 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     if (error instanceof ApiError) throw error;
     if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', undefined, undefined, 'timeout', undefined, transportDiagnostics(error, true));
     throw new ApiError('Không thể kết nối máy chủ. Kiểm tra kết nối và thử lại.', undefined, undefined, 'network', undefined, transportDiagnostics(error));
-  } finally { clearTimeout(timeout); }
+  } finally { clearTimeout(timeout); activeControllers.delete(controller); }
 }
 
 export type NativeMultipartFile = { uri: string; mimeType: string; fieldName: string; parameters?: Record<string, string> };
 export async function apiNativeMultipartUpload<T>(path: string, file: NativeMultipartFile, timeoutMs: number): Promise<T> {
   const FileSystem = require('expo-file-system/legacy') as typeof import('expo-file-system/legacy');
   const upload = async (accessToken: string) => {
-    const task = FileSystem.createUploadTask(`${API_BASE_URL}${path}`, file.uri, {
+    const generation = backendGeneration;
+    const task = FileSystem.createUploadTask(`${getApiBaseUrl()}${path}`, file.uri, {
       httpMethod: 'POST', uploadType: FileSystem.FileSystemUploadType.MULTIPART, fieldName: file.fieldName,
       mimeType: file.mimeType, parameters: file.parameters, headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
     });
+    const cancel = () => { void task.cancelAsync(); }; activeUploadCancellations.add(cancel);
     let didTimeout = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => { didTimeout = true; void task.cancelAsync(); reject(new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', undefined, undefined, 'timeout', undefined, { name: 'UploadTimeout', message: `Upload exceeded ${timeoutMs}ms`, timeout: true, abort: true, network: false })); }, timeoutMs); });
       const result = await Promise.race([task.uploadAsync(), timeout]);
       if (!result) throw new Error('Native upload returned no result');
+      if (generation !== backendGeneration) throw new ApiError('Yêu cầu đã được hủy vì máy chủ đã thay đổi.', undefined, undefined, 'network');
       return result;
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw new ApiError(didTimeout ? 'Máy chủ phản hồi quá lâu. Vui lòng thử lại.' : 'Không thể kết nối máy chủ. Kiểm tra kết nối và thử lại.', undefined, undefined, didTimeout ? 'timeout' : 'network', undefined, transportDiagnostics(error, didTimeout));
-    } finally { if (timer) clearTimeout(timer); }
+    } finally { if (timer) clearTimeout(timer); activeUploadCancellations.delete(cancel); }
   };
   const session = hooks?.getSession();
   if (!session?.accessToken) throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);

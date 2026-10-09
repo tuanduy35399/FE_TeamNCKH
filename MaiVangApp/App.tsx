@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, View } from '
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthProvider';
+import { BackendConfigProvider } from './src/api/BackendConfigProvider';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors, fonts, shadow } from './src/theme';
 const fontAssets = {
@@ -18,7 +19,7 @@ export default function App() {
     if (Platform.OS === 'web' && globalThis.document) globalThis.document.title = 'MaiCare – Trợ lý chăm sóc mai vàng';
   }, []);
   if (!fontsLoaded && !fontError) return <View style={styles.fontLoading}><ActivityIndicator accessibilityLabel="Đang mở MaiCare" color={colors.primary} /></View>;
-  return <SafeAreaProvider><View style={styles.outer}><View testID="app-shell" style={styles.shell}><AuthProvider><RootNavigator /></AuthProvider></View></View></SafeAreaProvider>;
+  return <SafeAreaProvider><View style={styles.outer}><View testID="app-shell" style={styles.shell}><BackendConfigProvider><AuthProvider><RootNavigator /></AuthProvider></BackendConfigProvider></View></View></SafeAreaProvider>;
 }
 const styles = StyleSheet.create({
   outer: { flex: 1, backgroundColor: Platform.OS === 'web' ? '#E7ECE8' : colors.background, alignItems: 'center' },

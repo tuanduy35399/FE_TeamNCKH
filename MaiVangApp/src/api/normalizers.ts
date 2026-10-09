@@ -1,6 +1,6 @@
 import { resolveBackendUrl } from './config';
 import { ApiError } from './errors';
-import type { Account, ChatMessage, DiseaseDetail, HistoryItem } from '../types/domain';
+import type { Account, BoundingBox, ChatMessage, ChatResult, Detection, DiseaseDetail, HistoryItem } from '../types/domain';
 export function normalizeAccount(value: unknown): Account {
   if (!value || typeof value !== 'object') throw new ApiError('Dữ liệu tài khoản không hợp lệ.', undefined, undefined, 'malformed');
   const raw = value as Record<string, unknown>;
@@ -28,4 +28,28 @@ export function normalizeHistoryDetail(value: unknown): HistoryItem {
   const messages = (value as { messages?: unknown }).messages;
   if (!Array.isArray(messages)) throw new ApiError('Chi tiết lịch sử không có danh sách tin nhắn.', undefined, undefined, 'malformed');
   return { ...item, messages: messages.map(normalizeMessage) };
+}
+
+function optionalBox(raw: Record<string, unknown>): BoundingBox | undefined {
+  const candidate = raw.bbox ?? raw.bbox_xyxy ?? raw.box ?? raw.xyxy ?? raw.coordinates;
+  if (!Array.isArray(candidate) || candidate.length !== 4 || !candidate.every(item => typeof item === 'number' && Number.isFinite(item))) return undefined;
+  return candidate as BoundingBox;
+}
+export function normalizeDetection(value: unknown): Detection {
+  const raw = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const labelValue = raw.name ?? raw.class_name ?? raw.label ?? raw.disease_name ?? raw.class_id;
+  const confidenceValue = raw.confidence ?? raw.score ?? raw.conf;
+  const detection: Detection = {};
+  if (typeof labelValue === 'string' || typeof labelValue === 'number') detection.label = String(labelValue);
+  if (typeof confidenceValue === 'number' && Number.isFinite(confidenceValue)) detection.confidence = confidenceValue;
+  const bbox = optionalBox(raw); if (bbox) detection.bbox = bbox;
+  if (typeof raw.class_id === 'number') detection.classId = raw.class_id;
+  if (typeof raw.disease_name === 'string') detection.diseaseName = raw.disease_name;
+  return detection;
+}
+export function normalizeInteraction(value: unknown, fallbackHistoryId?: number): ChatResult {
+  if (!value || typeof value !== 'object') throw new ApiError('Phản hồi hội thoại không hợp lệ.', undefined, undefined, 'malformed');
+  const raw = value as Record<string, unknown>; const historyId = typeof raw.history_id === 'number' ? raw.history_id : fallbackHistoryId;
+  if (!historyId || typeof raw.answer !== 'string' || !raw.answer.trim()) throw new ApiError('Phản hồi hội thoại không đầy đủ.', undefined, undefined, 'malformed');
+  return { historyId, question: typeof raw.question === 'string' ? raw.question : '', answer: raw.answer, detections: Array.isArray(raw.detections) ? raw.detections.map(normalizeDetection) : [], metadata: typeof raw.metadata === 'object' && raw.metadata ? raw.metadata as Record<string, unknown> : undefined };
 }

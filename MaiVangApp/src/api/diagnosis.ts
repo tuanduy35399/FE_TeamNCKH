@@ -1,15 +1,12 @@
 import { ApiError } from './errors';
 import { createHistory, deleteHistory, sendHistoryImage, sendHistoryText } from './history';
 import type { Detection, DiagnosisResult, SelectedImage } from '../types/domain';
+import { normalizeDetection } from './normalizers';
 
 export type DiagnosisInput = { text?: string; image?: SelectedImage; conversationId?: number };
 function detectionList(value: unknown): Detection[] {
   if (!Array.isArray(value)) return [];
-  return value.map(item => {
-    const raw = item && typeof item === 'object' ? item as Record<string, unknown> : {};
-    const labelValue = raw.name ?? raw.class_name ?? raw.label ?? raw.class_id;
-    return { label: typeof labelValue === 'string' || typeof labelValue === 'number' ? String(labelValue) : undefined, confidence: typeof raw.confidence === 'number' ? raw.confidence : undefined };
-  });
+  return value.map(normalizeDetection);
 }
 function titleFor(input: DiagnosisInput): string {
   const text = input.text?.trim();

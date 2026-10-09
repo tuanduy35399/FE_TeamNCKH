@@ -16,6 +16,8 @@ import { colors, fonts } from '../theme';
 import type { AuthStackParamList, MainStackParamList, TabParamList } from './types';
 import { TutorialProvider, useTutorial } from '../tutorial/TutorialProvider';
 import { ChatSessionProvider } from '../chat/ChatSessionProvider';
+import { useBackendConfig } from '../api/BackendConfigProvider';
+import { BackendSetupScreen } from '../screens/auth/BackendSetupScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bottomSafePadding, tabBarHeight } from './mobileLayout';
 
@@ -57,6 +59,9 @@ function MainNavigator() {
 }
 export function RootNavigator() {
   const { status } = useAuth();
+  const backend = useBackendConfig();
+  if (!backend.ready) return <View style={styles.loading}><LoadingState label="Đang mở MaiCare..." /></View>;
+  if (!backend.baseUrl) return <BackendSetupScreen />;
   if (status === 'restoring') return <View style={styles.loading}><LoadingState label="Đang mở MaiCare..." /></View>;
   return <NavigationContainer theme={navTheme} documentTitle={{ formatter: () => 'MaiCare – Trợ lý chăm sóc mai vàng' }}><StatusBar style="dark" />{status === 'authenticated' ? <MainNavigator /> : <AuthNavigator />}</NavigationContainer>;
 }

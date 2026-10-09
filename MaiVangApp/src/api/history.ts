@@ -1,4 +1,4 @@
-import { AI_TIMEOUT_MS, API_BASE_URL, IMAGE_TIMEOUT_MS } from './config';
+import { AI_TIMEOUT_MS, IMAGE_TIMEOUT_MS, getApiBaseUrl } from './config';
 import { apiNativeMultipartUpload, apiRequest } from './client';
 import { HISTORY_ENDPOINTS } from './endpoints';
 import { normalizeHistoryDetail, normalizeHistoryItem } from './normalizers';
@@ -64,7 +64,7 @@ export async function sendHistoryImage(id: number, image: SelectedImage, questio
     if (question) body.append('question', question);
   }
   if (developmentDiagnostics) console.info('[MaiCare image request]', {
-    endpoint: `${API_BASE_URL}${endpoint}`, method: 'POST', historyId: id, uriScheme: uploadUri.split(':', 1)[0],
+    endpoint: `${getApiBaseUrl()}${endpoint}`, method: 'POST', historyId: id, uriScheme: uploadUri.split(':', 1)[0],
     mimeType: uploadMimeType, filename: uploadName, width: image.width, height: image.height,
     approximateBytes: image.uploadSize || image.size, startedAt: new Date(startedAt).toISOString(),
   });
@@ -72,11 +72,11 @@ export async function sendHistoryImage(id: number, image: SelectedImage, questio
     const response = isReactNative
       ? await apiNativeMultipartUpload<InteractionDto>(endpoint, { uri: uploadUri, mimeType: uploadMimeType, fieldName: 'image', parameters: descriptor.parameters }, IMAGE_TIMEOUT_MS)
       : await apiRequest<InteractionDto>(endpoint, { method: 'POST', auth: true, timeoutMs: IMAGE_TIMEOUT_MS, body: body! });
-    if (developmentDiagnostics) console.info('[MaiCare image response]', { endpoint: `${API_BASE_URL}${endpoint}`, historyId: id, status: 200, elapsedMs: Date.now() - startedAt, detectionsCount: Array.isArray(response.detections) ? response.detections.length : undefined });
+    if (developmentDiagnostics) console.info('[MaiCare image response]', { endpoint: `${getApiBaseUrl()}${endpoint}`, historyId: id, status: 200, elapsedMs: Date.now() - startedAt, detectionsCount: Array.isArray(response.detections) ? response.detections.length : undefined });
     return response;
   } catch (error) {
     if (developmentDiagnostics && error instanceof ApiError) console.warn('[MaiCare image response]', {
-      endpoint: `${API_BASE_URL}${endpoint}`, historyId: id, status: error.status, elapsedMs: Date.now() - startedAt,
+      endpoint: `${getApiBaseUrl()}${endpoint}`, historyId: id, status: error.status, elapsedMs: Date.now() - startedAt,
       kind: error.kind, detail: error.debugDetail, errorName: error.transport?.name, errorMessage: error.transport?.message,
       errorCode: error.transport?.code, timeout: error.transport?.timeout ?? false, abort: error.transport?.abort ?? false, network: error.transport?.network ?? error.kind === 'network',
     });

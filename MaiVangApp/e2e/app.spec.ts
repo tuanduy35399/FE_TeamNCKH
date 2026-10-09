@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import path from 'node:path';
 
-const deployedApi = 'https://chat-bot-maivang-backend.onrender.com';
+const deployedApi = process.env.MAIVANG_DJANGO_ORIGIN || 'http://127.0.0.1:8000';
 let cleanupCredentials: { username: string; password: string } | undefined;
 test.afterEach(async ({ request }) => {
   if (!cleanupCredentials) return;
@@ -77,7 +77,7 @@ test('chat-first auth, isolated history continuation, opt-in diagnosis, persiste
   await expect(page.getByTestId('camera-speed-dial')).toBeVisible();
   await page.getByLabel('Đóng tùy chọn ảnh').click(); await expect(page.getByTestId('camera-speed-dial')).toHaveCount(0);
   await page.getByTestId('diagnosis-toggle').click();
-  await page.route('http://127.0.0.1:8010/api/v1/history/*/chat/image/', async route => {
+  await page.route('**/api/v1/history/*/chat/image/', async route => {
     imageRequestObserved = true;
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Upstream diagnosis service unavailable during release regression.' }) });
   });

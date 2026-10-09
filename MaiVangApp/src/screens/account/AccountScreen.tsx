@@ -6,9 +6,12 @@ import { ApiError } from '../../api/errors';
 import { useAuth } from '../../auth/AuthProvider';
 import { AppButton } from '../../components/AppButton';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { BackendConfigCard } from '../../components/BackendConfigCard';
 import { Screen } from '../../components/Screen';
 import { colors, radius, spacing } from '../../theme';
 import { useTutorial } from '../../tutorial/TutorialProvider';
+import { clearLocalImageHistoryForUser } from '../../history/imageHistory';
+import { saveActiveHistoryId } from '../../chat/storage';
 
 export function AccountScreen() {
   const { account, signOut, deleteAccount } = useAuth();
@@ -22,9 +25,14 @@ export function AccountScreen() {
     catch (value) { setError(value instanceof ApiError ? value.userMessage : 'Không thể xóa tài khoản.'); }
     finally { setBusy(false); }
   }
+  async function prepareBackendChange() {
+    if (account?.id) { await saveActiveHistoryId(account.id, null); await clearLocalImageHistoryForUser(account.id).catch(() => undefined); }
+    await signOut();
+  }
   return <Screen scroll testID="account-screen"><View style={styles.hero}><View style={styles.avatar}><Ionicons name="person" size={34} color={colors.primary} /></View><Text style={styles.name}>{account?.name}</Text><Text style={styles.username}>@{account?.username}</Text>{account?.isStaff && <Text style={styles.role}>Quản trị viên</Text>}</View>
     <View style={styles.card}><Row icon="mail-outline" label="Email" value={account?.email || ''} /><Row icon="person-circle-outline" label="Tên đăng nhập" value={account?.username || ''} /></View>
     <View style={styles.guide}><View style={styles.guideIcon}><Ionicons name="compass-outline" size={24} color={colors.primary} /></View><View style={styles.guideCopy}><Text style={styles.guideTitle}>Hướng dẫn sử dụng</Text><Text style={styles.guideText}>Xem lại từng chức năng chính của MaiCare AI.</Text></View><Pressable testID="replay-tutorial" accessibilityRole="button" onPress={() => { navigation.navigate('Chat'); setTimeout(replay, 280); }} style={styles.guideButton}><Text style={styles.guideButtonText}>Xem lại hướng dẫn</Text></Pressable></View>
+    <BackendConfigCard onBeforeChange={prepareBackendChange} />
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     <View style={styles.actions}><AppButton title="Đăng xuất" variant="secondary" onPress={() => void signOut()} testID="logout-button" /><AppButton title="Xóa tài khoản" variant="danger" onPress={() => setConfirming(true)} testID="delete-account-button" /></View>
     <ConfirmModal visible={confirming} busy={busy} onCancel={() => !busy && setConfirming(false)} onConfirm={remove} />

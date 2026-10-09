@@ -14,9 +14,6 @@
       }
     },
     "production": {
-      "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://chat-bot-maivang-backend.onrender.com"
-      },
       "android": {
         "buildType": "app-bundle"
       }

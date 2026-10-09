@@ -4,6 +4,7 @@ import { configureApiSession } from '../api/client';
 import { clearSession, loadSession, saveSession } from './storage';
 import type { Account, Session } from '../types/domain';
 import { clearLocalImageHistoryForUser } from '../history/imageHistory';
+import { useBackendConfig } from '../api/BackendConfigProvider';
 
 type AuthContextValue = {
   status: 'restoring' | 'unauthenticated' | 'authenticated';
@@ -17,6 +18,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const backend = useBackendConfig();
   const [status, setStatus] = useState<AuthContextValue['status']>('restoring');
   const [account, setAccount] = useState<Account | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -31,6 +33,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     configureApiSession({ getSession: () => sessionRef.current, updateSession: persist, invalidate });
+    if (!backend.ready) return () => configureApiSession(null);
+    if (!backend.baseUrl) { sessionRef.current = null; setAccount(null); setStatus('unauthenticated'); return () => configureApiSession(null); }
     void (async () => {
       const stored = await loadSession();
       if (!stored) { setStatus('unauthenticated'); return; }
@@ -45,7 +49,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
     })();
     return () => configureApiSession(null);
-  }, []);
+  }, [backend.ready, backend.baseUrl]);
 
   const value = useMemo<AuthContextValue>(() => ({
     status, account, notice, clearNotice: () => setNotice(null),
