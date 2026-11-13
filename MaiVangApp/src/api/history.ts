@@ -1,9 +1,10 @@
 import { AI_TIMEOUT_MS, IMAGE_TIMEOUT_MS, getApiBaseUrl } from './config';
-import { apiNativeMultipartUpload, apiRequest } from './client';
+import { apiNativeMultipartUpload, apiRequest, apiStreamRequest } from './client';
 import { HISTORY_ENDPOINTS } from './endpoints';
 import { normalizeHistoryDetail, normalizeHistoryItem } from './normalizers';
 import type { HistoryItem, SelectedImage } from '../types/domain';
 import { ApiError } from './errors';
+import { consumeSseResponse, type SseEvent } from './sse';
 
 type HistoryListDto = { id: number; title: string; created_at: string; updated_at: string };
 type MessageDto = { id: number; role: string; content: string; created_at: string };
@@ -40,6 +41,38 @@ export async function renameHistory(id: number, title: string): Promise<HistoryI
 }
 export async function sendHistoryText(id: number, question: string): Promise<InteractionDto> {
   return apiRequest<InteractionDto>(HISTORY_ENDPOINTS.chat(id), { method: 'POST', auth: true, timeoutMs: AI_TIMEOUT_MS, body: JSON.stringify({ question }) });
+}
+
+function interactionFromComplete(event: SseEvent): InteractionDto {
+  if (typeof event.answer !== 'string' || !event.answer.trim()) {
+    throw new ApiError('MaiCare chưa nhận được nội dung trả lời. Vui lòng thử lại.', undefined, undefined, 'malformed');
+  }
+  return event as InteractionDto;
+}
+
+async function consumeInteractionStream(
+  path: string,
+  options: RequestInit & { timeoutMs: number },
+  onEvent: (event: SseEvent) => void,
+): Promise<InteractionDto> {
+  const handle = await apiStreamRequest(path, { ...options, auth: true });
+  try {
+    return interactionFromComplete(await consumeSseResponse(handle.response, onEvent));
+  } finally {
+    handle.cleanup();
+  }
+}
+
+export async function sendHistoryTextStream(
+  id: number,
+  question: string,
+  onEvent: (event: SseEvent) => void,
+): Promise<InteractionDto> {
+  return consumeInteractionStream(
+    HISTORY_ENDPOINTS.chatStream(id),
+    { method: 'POST', timeoutMs: AI_TIMEOUT_MS, body: JSON.stringify({ question }) },
+    onEvent,
+  );
 }
 async function imagePart(image: SelectedImage): Promise<Blob | { uri: string; name: string; type: string }> {
   if (image.file) return image.file;
@@ -87,4 +120,32 @@ export async function sendHistoryImage(id: number, image: SelectedImage, questio
     if (error instanceof ApiError && error.status && error.status >= 500) throw new ApiError('Hệ thống chẩn đoán gặp lỗi xử lý. Vui lòng thử lại sau.', error.status, error.fieldErrors, error.kind, error.debugDetail);
     throw error;
   }
+}
+
+export async function sendHistoryImageStream(
+  id: number,
+  image: SelectedImage,
+  question: string | undefined,
+  onEvent: (event: SseEvent) => void,
+): Promise<InteractionDto> {
+  const descriptor = nativeImageDescriptor(image, question);
+  const body = new FormData();
+  const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+  if (isReactNative) {
+    body.append('image', {
+      uri: descriptor.uri,
+      name: descriptor.name,
+      type: descriptor.mimeType,
+    } as unknown as Blob);
+  } else {
+    const part = await imagePart(image);
+    if (part instanceof Blob) body.append('image', part, descriptor.name);
+    else body.append('image', part as unknown as Blob);
+  }
+  if (question?.trim()) body.append('question', question.trim());
+  return consumeInteractionStream(
+    HISTORY_ENDPOINTS.imageChatStream(id),
+    { method: 'POST', timeoutMs: IMAGE_TIMEOUT_MS, body },
+    onEvent,
+  );
 }

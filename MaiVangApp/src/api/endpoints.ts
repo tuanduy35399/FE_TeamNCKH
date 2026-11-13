@@ -9,6 +9,8 @@ export const HISTORY_ENDPOINTS = {
   list: '/api/v1/history/',
   detail: (id: number) => `/api/v1/history/${id}/`,
   chat: (id: number) => `/api/v1/history/${id}/chat/`,
+  chatStream: (id: number) => `/api/v1/history/${id}/chat/stream/`,
   imageChat: (id: number) => `/api/v1/history/${id}/chat/image/`,
+  imageChatStream: (id: number) => `/api/v1/history/${id}/chat/image/stream/`,
 } as const;
 export const DISEASE_ENDPOINTS = { list: '/api/v1/diseases/', detail: (id: number) => `/api/v1/diseases/${id}/` } as const;

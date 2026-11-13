@@ -108,6 +108,63 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   } finally { clearTimeout(timeout); activeControllers.delete(controller); }
 }
 
+export type ApiStreamHandle = { response: Response; cleanup: () => void };
+
+export async function apiStreamRequest(path: string, options: ApiRequestOptions = {}): Promise<ApiStreamHandle> {
+  const controller = new AbortController();
+  activeControllers.add(controller);
+  const generation = backendGeneration;
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? AUTH_TIMEOUT_MS);
+  const cleanup = () => { clearTimeout(timeout); activeControllers.delete(controller); };
+  const headers = new Headers(options.headers);
+  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  if (options.auth) {
+    const access = hooks?.getSession()?.accessToken;
+    if (access) headers.set('Authorization', `Bearer ${access}`);
+  }
+  try {
+    const { auth: _auth, retryAuth: _retryAuth, timeoutMs: _timeoutMs, ...fetchOptions } = options;
+    const baseUrl = getApiBaseUrl();
+    let response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+    if (response.status === 401 && options.auth && options.retryAuth !== false && hooks) {
+      try {
+        refreshPromise ||= refreshAccessToken().finally(() => { refreshPromise = null; });
+        headers.set('Authorization', `Bearer ${await refreshPromise}`);
+        response = await fetch(`${baseUrl}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+      } catch (error) {
+        cleanup();
+        if (error instanceof ApiError && (error.kind === 'network' || error.kind === 'timeout')) throw error;
+        await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
+      }
+    }
+    if (response.status === 401 && options.auth && hooks) {
+      cleanup();
+      await hooks.invalidate('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
+    }
+    if (generation !== backendGeneration) {
+      cleanup();
+      throw new ApiError('Yêu cầu đã được hủy vì máy chủ đã thay đổi.', undefined, undefined, 'network');
+    }
+    if (!response.ok) {
+      const payload = await parseResponse(response);
+      cleanup();
+      throw new ApiError(apiMessage(response.status, payload), response.status, fieldErrorsFromPayload(payload), 'http', safeDebugDetail(payload));
+    }
+    if (!response.body) {
+      cleanup();
+      throw new ApiError('Máy chủ không hỗ trợ luồng dữ liệu.', response.status, undefined, 'malformed');
+    }
+    return { response, cleanup };
+  } catch (error) {
+    cleanup();
+    if (error instanceof ApiError) throw error;
+    if (error instanceof Error && error.name === 'AbortError') throw new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', undefined, undefined, 'timeout', undefined, transportDiagnostics(error, true));
+    throw new ApiError('Không thể kết nối máy chủ. Kiểm tra kết nối và thử lại.', undefined, undefined, 'network', undefined, transportDiagnostics(error));
+  }
+}
+
 export type NativeMultipartFile = { uri: string; mimeType: string; fieldName: string; parameters?: Record<string, string> };
 export async function apiNativeMultipartUpload<T>(path: string, file: NativeMultipartFile, timeoutMs: number): Promise<T> {
   const FileSystem = require('expo-file-system/legacy') as typeof import('expo-file-system/legacy');
