@@ -21,9 +21,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   createHistory,
   getHistoryDetail,
-  sendHistoryImage,
-  sendHistoryText,
+  sendHistoryImageStream,
+  sendHistoryTextStream,
 } from "../../api/history";
+import type { SseEvent } from "../../api/sse";
 import { ApiError } from "../../api/errors";
 import { useAuth } from "../../auth/AuthProvider";
 import { AssistantContent } from "../../components/AssistantContent";
@@ -55,12 +56,18 @@ import {
 import { scaleContainedBoundingBox } from "../../images/imageGeometry";
 import { useTutorial } from "../../tutorial/TutorialProvider";
 import { colors, radius, spacing } from "../../theme";
+import { progressForEvent, type ProgressStage } from "../../chat/streamProgress";
 import type { ChatMessage, Detection, SelectedImage } from "../../types/domain";
 import type { TabParamList } from "../../navigation/types";
 import { confidenceLabel, diseaseLabel } from "../../utils/diseaseLabels";
 
 type Props = BottomTabScreenProps<TabParamList, "Chat">;
 type UploadStage = "uploading" | "analyzing";
+const progressIcons = {
+  preparing: require("../../../docs/preparing_icon.png"),
+  processing: require("../../../docs/processing_icon.png"),
+  complete: require("../../../docs/complete_icon.png"),
+} as const;
 const welcomePrompts = [
   "Cách chăm mai sau Tết?",
   "Vì sao lá mai bị vàng?",
@@ -141,6 +148,7 @@ export function ChatScreen({ navigation }: Props) {
   const [pickerNeedsSettings, setPickerNeedsSettings] = useState(false);
   const [sending, setSending] = useState(false);
   const [uploadStage, setUploadStage] = useState<UploadStage>();
+  const [streamStage, setStreamStage] = useState<ProgressStage>();
   const [failed, setFailed] = useState<FailedRequestState>();
   const [retryCoolingDown, setRetryCoolingDown] = useState(false);
   const retryCooldownTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -182,6 +190,7 @@ export function ChatScreen({ navigation }: Props) {
     releaseSubmissionLock(sendLocked);
     setSending(false);
     setUploadStage(undefined);
+    setStreamStage(undefined);
     setText('');
     setImage(current => { void cleanupNormalizedImage(current); return undefined; });
     setFailed(undefined);
@@ -201,6 +210,7 @@ export function ChatScreen({ navigation }: Props) {
     releaseSubmissionLock(sendLocked);
     setSending(false);
     setUploadStage(undefined);
+    setStreamStage(undefined);
     setText("");
     setImage(undefined);
     void cleanupNormalizedImage(previousImage);
@@ -308,6 +318,7 @@ export function ChatScreen({ navigation }: Props) {
     if (overrideQuestion === undefined) setText(captured.nextComposerText);
     setFailed(undefined);
     setSending(true);
+    setStreamStage("preparing");
     setUploadStage(selected ? "uploading" : undefined);
     const stageTimer = selected
       ? setTimeout(() => {
@@ -325,9 +336,14 @@ export function ChatScreen({ navigation }: Props) {
         if (account?.id) await saveActiveHistoryId(account.id, targetId);
       }
       if (!isCurrentGeneration(token)) return;
+      const onStreamEvent = (event: SseEvent) => {
+        if (!isCurrentGeneration(token)) return;
+        const progress = progressForEvent(event);
+        if (progress) setStreamStage(progress.stage);
+      };
       const response = selected
-        ? await sendHistoryImage(targetId, selected, question || undefined)
-        : await sendHistoryText(targetId, question);
+        ? await sendHistoryImageStream(targetId, selected, question || undefined, onStreamEvent)
+        : await sendHistoryTextStream(targetId, question, onStreamEvent);
       if (!isCurrentGeneration(token)) return;
       if (
         Number(response.history_id) !== targetId ||
@@ -343,6 +359,7 @@ export function ChatScreen({ navigation }: Props) {
       const detections = selected
         ? normalizeDetections(response.detections)
         : undefined;
+      setStreamStage("complete");
       let reconciledMessages: ChatMessage[] | undefined;
       try {
         reconciledMessages = await reconcile(targetId, selected, detections, token, retry ? question : undefined);
@@ -381,6 +398,7 @@ export function ChatScreen({ navigation }: Props) {
       if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
     } catch (value) {
       if (!isCurrentGeneration(token)) return;
+      setStreamStage(undefined);
       const error =
         value instanceof ApiError
           ? value
@@ -417,6 +435,9 @@ export function ChatScreen({ navigation }: Props) {
         releaseSubmissionLock(sendLocked);
         setSending(false);
         setUploadStage(undefined);
+        setTimeout(() => {
+          if (isCurrentGeneration(token)) setStreamStage(undefined);
+        }, 700);
       }
     }
   }
@@ -574,11 +595,26 @@ export function ChatScreen({ navigation }: Props) {
           )}
         </View>
         <View onLayout={event => setBottomPanelHeight(event.nativeEvent.layout.height)}>
-        {sending && (
+        {(sending || streamStage) && (
           <View style={styles.typing}>
-            <ActivityIndicator size="small" color={colors.primary} />
+            {streamStage ? (
+              <Image
+                accessibilityLabel="Tiến trình xử lý"
+                source={progressIcons[streamStage]}
+                resizeMode="contain"
+                style={styles.progressIcon}
+              />
+            ) : (
+              <ActivityIndicator size="small" color={colors.primary} />
+            )}
             <Text style={styles.muted}>
-              {uploadStage === "uploading"
+              {streamStage === "preparing"
+                ? "Đang chuẩn bị câu hỏi..."
+                : streamStage === "processing"
+                  ? image ? "MaiCare đang phân tích hình ảnh..." : "MaiCare đang phân tích thông tin..."
+                  : streamStage === "complete"
+                    ? "Đã nhận kết quả."
+                    : uploadStage === "uploading"
                 ? "Đang tải ảnh..."
                 : uploadStage === "analyzing"
                   ? "Đang phân tích ảnh..."
@@ -1027,6 +1063,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     backgroundColor: colors.surface,
   },
+  progressIcon: { width: 32, height: 32, borderRadius: 8 },
   errorCard: {
     padding: 11,
     gap: 9,

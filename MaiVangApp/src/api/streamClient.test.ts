@@ -61,3 +61,17 @@ test('image stream client sends multipart data to the image stream endpoint', as
     assert.equal(calls[0]!.init?.body instanceof FormData, true);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test('image stream client keeps the existing safe image error messages', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ detail: 'invalid image' }), { status: 422 });
+  try {
+    await assert.rejects(
+      () => sendHistoryImageStream(10, {
+        uri: 'file:///leaf.jpg', name: 'leaf.jpg', mimeType: 'image/jpeg',
+        file: new Blob(['leaf-bytes'], { type: 'image/jpeg' }),
+      }, undefined, () => undefined),
+      (error: unknown) => error instanceof ApiError && error.userMessage === 'Ảnh không hợp lệ hoặc định dạng chưa được hỗ trợ.' && error.status === 422,
+    );
+  } finally { globalThis.fetch = originalFetch; }
+});

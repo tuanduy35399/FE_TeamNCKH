@@ -143,9 +143,18 @@ export async function sendHistoryImageStream(
     else body.append('image', part as unknown as Blob);
   }
   if (question?.trim()) body.append('question', question.trim());
-  return consumeInteractionStream(
-    HISTORY_ENDPOINTS.imageChatStream(id),
-    { method: 'POST', timeoutMs: IMAGE_TIMEOUT_MS, body },
-    onEvent,
-  );
+  try {
+    return await consumeInteractionStream(
+      HISTORY_ENDPOINTS.imageChatStream(id),
+      { method: 'POST', timeoutMs: IMAGE_TIMEOUT_MS, body },
+      onEvent,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && [400, 415, 422].includes(error.status || 0)) throw new ApiError('Ảnh không hợp lệ hoặc định dạng chưa được hỗ trợ.', error.status, error.fieldErrors, error.kind, error.debugDetail);
+    if (error instanceof ApiError && error.status === 413) throw new ApiError('Ảnh vượt quá dung lượng máy chủ cho phép. Vui lòng chọn ảnh nhỏ hơn.', 413, error.fieldErrors, error.kind, error.debugDetail);
+    if (error instanceof ApiError && (error.status === 502 || error.status === 503)) throw new ApiError('Dịch vụ chẩn đoán AI đang tạm thời gián đoạn. Vui lòng thử lại sau.', error.status, error.fieldErrors, error.kind, error.debugDetail);
+    if (error instanceof ApiError && (error.status === 504 || error.kind === 'timeout')) throw new ApiError('Chẩn đoán đang mất nhiều thời gian hơn bình thường. Vui lòng thử lại.', error.status, error.fieldErrors, error.kind, error.debugDetail);
+    if (error instanceof ApiError && error.status && error.status >= 500) throw new ApiError('Hệ thống chẩn đoán gặp lỗi xử lý. Vui lòng thử lại sau.', error.status, error.fieldErrors, error.kind, error.debugDetail);
+    throw error;
+  }
 }
