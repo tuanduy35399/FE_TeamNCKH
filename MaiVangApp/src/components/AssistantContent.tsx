@@ -15,7 +15,7 @@ export function AssistantContent({ children, testID }: { children: string; testI
   const blocks = parseAssistantContent(children);
   return <View testID={testID} accessibilityLabel={blocks.map(block => block.inlines.map(item => item.text).join('')).join('\n')} style={styles.container}>
     {blocks.map((block, index) => {
-      if (block.kind === 'bullet' || block.kind === 'numbered') return <View key={index} style={styles.listRow}><Text style={styles.marker}>{block.kind === 'bullet' ? '•' : `${block.number}.`}</Text><Text style={styles.body}><InlineContent items={block.inlines} /></Text></View>;
+      if (block.kind === 'bullet' || block.kind === 'numbered') return <View key={index} style={styles.listRow}><Text style={styles.marker}>{block.kind === 'bullet' ? '•' : `${block.number}.`}</Text><Text style={[styles.body, styles.listBody]}><InlineContent items={block.inlines} /></Text></View>;
       return <Text key={index} style={block.kind === 'heading' ? [styles.heading, (block.level ?? 1) > 1 ? styles.subheading : undefined] : styles.body}><InlineContent items={block.inlines} /></Text>;
     })}
   </View>;
@@ -27,7 +27,9 @@ const styles = StyleSheet.create({
   heading: { color: colors.primaryDark, fontFamily: fonts.bold, fontSize: 19, lineHeight: 25, marginTop: 2 },
   subheading: { fontSize: 17, lineHeight: 23 },
   listRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
-  marker: { width: 22, color: colors.primaryDark, fontFamily: fonts.medium, fontSize: 15, lineHeight: 23, textAlign: 'right' },
+  listBody: { flex: 1, minWidth: 0 },
+  // Keep every list item's text aligned, even when long content wraps on the web.
+  marker: { width: 22, flexShrink: 0, color: colors.primaryDark, fontFamily: fonts.medium, fontSize: 15, lineHeight: 23, textAlign: 'right' },
   bold: { fontFamily: fonts.bold },
   italic: { fontStyle: 'italic' },
   code: { fontFamily: fonts.medium, color: colors.primaryDark, backgroundColor: colors.primarySoft },

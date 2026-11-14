@@ -28,6 +28,7 @@ import type { SseEvent } from "../../api/sse";
 import { ApiError } from "../../api/errors";
 import { useAuth } from "../../auth/AuthProvider";
 import { AssistantContent } from "../../components/AssistantContent";
+import { WaveText } from "../../components/WaveText";
 import { saveLocalImageHistory } from "../../history/imageHistory";
 import { saveActiveHistoryId } from "../../chat/storage";
 import { useChatSession } from "../../chat/ChatSessionProvider";
@@ -56,7 +57,7 @@ import {
 import { scaleContainedBoundingBox } from "../../images/imageGeometry";
 import { useTutorial } from "../../tutorial/TutorialProvider";
 import { colors, radius, spacing } from "../../theme";
-import { progressForEvent, type ProgressStage } from "../../chat/streamProgress";
+import { progressForEvent, type ProgressDisplay } from "../../chat/streamProgress";
 import type { ChatMessage, Detection, SelectedImage } from "../../types/domain";
 import type { TabParamList } from "../../navigation/types";
 import { confidenceLabel, diseaseLabel } from "../../utils/diseaseLabels";
@@ -148,7 +149,8 @@ export function ChatScreen({ navigation }: Props) {
   const [pickerNeedsSettings, setPickerNeedsSettings] = useState(false);
   const [sending, setSending] = useState(false);
   const [uploadStage, setUploadStage] = useState<UploadStage>();
-  const [streamStage, setStreamStage] = useState<ProgressStage>();
+  const [streamProgress, setStreamProgress] = useState<ProgressDisplay>();
+  const streamStage = streamProgress?.stage;
   const [failed, setFailed] = useState<FailedRequestState>();
   const [retryCoolingDown, setRetryCoolingDown] = useState(false);
   const retryCooldownTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -190,7 +192,7 @@ export function ChatScreen({ navigation }: Props) {
     releaseSubmissionLock(sendLocked);
     setSending(false);
     setUploadStage(undefined);
-    setStreamStage(undefined);
+    setStreamProgress(undefined);
     setText('');
     setImage(current => { void cleanupNormalizedImage(current); return undefined; });
     setFailed(undefined);
@@ -210,7 +212,7 @@ export function ChatScreen({ navigation }: Props) {
     releaseSubmissionLock(sendLocked);
     setSending(false);
     setUploadStage(undefined);
-    setStreamStage(undefined);
+    setStreamProgress(undefined);
     setText("");
     setImage(undefined);
     void cleanupNormalizedImage(previousImage);
@@ -318,7 +320,7 @@ export function ChatScreen({ navigation }: Props) {
     if (overrideQuestion === undefined) setText(captured.nextComposerText);
     setFailed(undefined);
     setSending(true);
-    setStreamStage("preparing");
+    setStreamProgress(progressForEvent({ type: 'progress', stage: 'preparing' }));
     setUploadStage(selected ? "uploading" : undefined);
     const stageTimer = selected
       ? setTimeout(() => {
@@ -338,8 +340,8 @@ export function ChatScreen({ navigation }: Props) {
       if (!isCurrentGeneration(token)) return;
       const onStreamEvent = (event: SseEvent) => {
         if (!isCurrentGeneration(token)) return;
-        const progress = progressForEvent(event);
-        if (progress) setStreamStage(progress.stage);
+        const progress = progressForEvent(event, !!selected);
+        if (progress) setStreamProgress(progress);
       };
       const response = selected
         ? await sendHistoryImageStream(targetId, selected, question || undefined, onStreamEvent)
@@ -359,7 +361,7 @@ export function ChatScreen({ navigation }: Props) {
       const detections = selected
         ? normalizeDetections(response.detections)
         : undefined;
-      setStreamStage("complete");
+      setStreamProgress({ stage: 'complete', message: 'Đã nhận kết quả.', icon: 'complete' });
       let reconciledMessages: ChatMessage[] | undefined;
       try {
         reconciledMessages = await reconcile(targetId, selected, detections, token, retry ? question : undefined);
@@ -398,7 +400,7 @@ export function ChatScreen({ navigation }: Props) {
       if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
     } catch (value) {
       if (!isCurrentGeneration(token)) return;
-      setStreamStage(undefined);
+      setStreamProgress(undefined);
       const error =
         value instanceof ApiError
           ? value
@@ -436,7 +438,7 @@ export function ChatScreen({ navigation }: Props) {
         setSending(false);
         setUploadStage(undefined);
         setTimeout(() => {
-          if (isCurrentGeneration(token)) setStreamStage(undefined);
+          if (isCurrentGeneration(token)) setStreamProgress(undefined);
         }, 700);
       }
     }
@@ -607,19 +609,13 @@ export function ChatScreen({ navigation }: Props) {
             ) : (
               <ActivityIndicator size="small" color={colors.primary} />
             )}
-            <Text style={styles.muted}>
-              {streamStage === "preparing"
-                ? "Đang chuẩn bị câu hỏi..."
-                : streamStage === "processing"
-                  ? image ? "MaiCare đang phân tích hình ảnh..." : "MaiCare đang phân tích thông tin..."
-                  : streamStage === "complete"
-                    ? "Đã nhận kết quả."
-                    : uploadStage === "uploading"
+            <WaveText animated={sending && streamStage !== 'complete'}>
+              {streamProgress?.message || (uploadStage === "uploading"
                 ? "Đang tải ảnh..."
                 : uploadStage === "analyzing"
                   ? "Đang phân tích ảnh..."
-                  : "MaiCare đang trả lời..."}
-            </Text>
+                  : "MaiCare đang trả lời...")}
+            </WaveText>
           </View>
         )}
         {failed && (

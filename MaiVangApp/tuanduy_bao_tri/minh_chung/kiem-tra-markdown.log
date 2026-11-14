@@ -1,0 +1,11 @@
+✔ normalizes escaped newlines and trailing separators (0.687771ms)
+✔ parses headings, lists, emphasis, code, and safe links without raw markers (1.571224ms)
+✔ keeps user-facing paragraphs readable and Vietnamese intact (0.138455ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 99.796908
