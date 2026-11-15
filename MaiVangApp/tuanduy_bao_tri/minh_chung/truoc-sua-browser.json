@@ -1,0 +1,1580 @@
+{
+  "phase": "truoc-sua",
+  "browser": "157.0.8103.50",
+  "timestamp": "2026-11-14T15:35:02.728Z",
+  "passed": 36,
+  "failed": 9,
+  "results": [
+    {
+      "name": "320px / steps / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "320px / steps / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "320px / headings / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "320px / headings / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "320px / indentation / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "320px / indentation / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "320px / numbered / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "320px / numbered / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "360px / steps / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "360px / steps / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "360px / headings / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "360px / headings / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "360px / indentation / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "360px / indentation / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "360px / numbered / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "360px / numbered / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "390px / steps / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "390px / steps / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "390px / headings / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "390px / headings / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "390px / indentation / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "390px / indentation / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "390px / numbered / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "390px / numbered / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "412px / steps / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "412px / steps / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "412px / headings / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "412px / headings / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "412px / indentation / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "412px / indentation / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "412px / numbered / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "412px / numbered / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "1280px / steps / alignment",
+      "status": "FAIL",
+      "detail": "Cột dấu đầu dòng phải giữ nguyên 22px"
+    },
+    {
+      "name": "1280px / steps / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "1280px / headings / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "1280px / headings / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "1280px / indentation / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "1280px / indentation / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "1280px / numbered / alignment",
+      "status": "PASS"
+    },
+    {
+      "name": "1280px / numbered / no-overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "Giữ nội dung, in đậm, in nghiêng, code và liên kết",
+      "status": "PASS"
+    },
+    {
+      "name": "Nội dung rỗng không tạo dòng thừa",
+      "status": "PASS"
+    },
+    {
+      "name": "Gõ Markdown và cập nhật từng phần như streaming",
+      "status": "PASS"
+    },
+    {
+      "name": "Không có lỗi trình duyệt hoặc yêu cầu thất bại",
+      "status": "PASS"
+    },
+    {
+      "name": "Không gửi yêu cầu ra BE hay dịch vụ ngoài",
+      "status": "PASS"
+    }
+  ],
+  "measurements": [
+    {
+      "width": 320,
+      "case": "steps",
+      "rows": [
+        {
+          "text": "1. Các bước trị bệnh nấm hồng",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29,
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01 (Pha thuốc): Pha hỗn hợp thuốc nấm theo công thức:",
+          "isList": true,
+          "x": 49.34375,
+          "markerWidth": 11.34375,
+          "lineStarts": [
+            49.34375,
+            49.34375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Pha COC85 tỉ lệ 10g / 50ml nước (hoặc 10g / 70-100ml nước). Có thể thay thế bằng CHAMPION 77WP nấm hồng.",
+          "isList": true,
+          "x": 44.359375,
+          "markerWidth": 6.359375,
+          "lineStarts": [
+            44.359375,
+            44.359375,
+            44.359375,
+            44.359375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Hoặc có thể pha: RIDOMIL GOLD tỉ lệ 10g / 50-100ml nước.",
+          "isList": true,
+          "x": 49.890625,
+          "markerWidth": 11.890625,
+          "lineStarts": [
+            49.890625,
+            49.890625,
+            49.890625
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Lưu ý khi chọn thuốc: Mùa mưa sử dụng COC85 sẽ ổn hơn do khả năng bám dính mạnh; mùa nắng dùng CHAMPION 77WP hiệu quả hơn.",
+          "isList": true,
+          "x": 43.3125,
+          "markerWidth": 5.3125,
+          "lineStarts": [
+            43.3125,
+            43.3125,
+            43.3125,
+            43.3125,
+            43.3125
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02 (Quét thuốc): Dùng cọ, bàn chải hoặc vải... quét trực tiếp hỗn hợp thuốc nấm đã pha lên thân, cành ở những vị trí bị nấm hồng tấn công.",
+          "isList": true,
+          "x": 43.25,
+          "markerWidth": 5.25,
+          "lineStarts": [
+            43.25,
+            43.25,
+            43.25,
+            43.25,
+            43.25
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03 (Kiểm tra lại sau 5 - 10 ngày):",
+          "isList": true,
+          "x": 55.609375,
+          "markerWidth": 17.609375,
+          "lineStarts": [
+            55.609375,
+            55.609375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng chưa chết/chưa cháy: Tiếp tục pha thuốc và quét lần 2.",
+          "isList": true,
+          "x": 48.109375,
+          "markerWidth": 10.109375,
+          "lineStarts": [
+            48.109375,
+            48.109375,
+            48.109375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng đã chết/đã cháy: Tiến hành pha thuốc nấm (như RIDOMIL GOLD hoặc Anvil) xịt lên thân, cành, lá để phòng bệnh.",
+          "isList": true,
+          "x": 43.6875,
+          "markerWidth": 5.6875,
+          "lineStarts": [
+            43.6875,
+            43.6875,
+            43.6875,
+            43.6875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04 (Phòng ngừa sau điều trị): Sau khi xử lý được nấm hồng, cần lưu ý theo dõi cây và chăm sóc định kỳ.",
+          "isList": true,
+          "x": 44.59375,
+          "markerWidth": 6.59375,
+          "lineStarts": [
+            44.59375,
+            44.59375,
+            44.59375,
+            44.59375
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "case": "headings",
+      "rows": [
+        {
+          "text": "Tiêu đề chính",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát lá",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Theo dõi cây",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Ghi nhận kết quả",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "case": "indentation",
+      "rows": [
+        {
+          "text": "Danh sách với khoảng trắng đầu dòng khác nhau:",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29,
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Không có dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Hai dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Ba dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Một dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "case": "numbered",
+      "rows": [
+        {
+          "text": "Danh sách đánh số",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát kỹ mặt trên và mặt dưới của lá mai trước khi ghi nhận kết quả kiểm tra.",
+          "isList": true,
+          "x": 50.71875,
+          "markerWidth": 12.71875,
+          "lineStarts": [
+            50.71875,
+            50.71875,
+            50.71875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 10: Theo dõi kết quả sau nhiều ngày và ghi lại sự thay đổi của cây trong sổ chăm sóc.",
+          "isList": true,
+          "x": 59.25,
+          "markerWidth": 21.25,
+          "lineStarts": [
+            59.25,
+            59.25,
+            59.25,
+            59.25
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "case": "steps",
+      "rows": [
+        {
+          "text": "1. Các bước trị bệnh nấm hồng",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01 (Pha thuốc): Pha hỗn hợp thuốc nấm theo công thức:",
+          "isList": true,
+          "x": 51.171875,
+          "markerWidth": 13.171875,
+          "lineStarts": [
+            51.171875,
+            51.171875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Pha COC85 tỉ lệ 10g / 50ml nước (hoặc 10g / 70-100ml nước). Có thể thay thế bằng CHAMPION 77WP nấm hồng.",
+          "isList": true,
+          "x": 45.375,
+          "markerWidth": 7.375,
+          "lineStarts": [
+            45.375,
+            45.375,
+            45.375,
+            45.375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Hoặc có thể pha: RIDOMIL GOLD tỉ lệ 10g / 50-100ml nước.",
+          "isList": true,
+          "x": 51.796875,
+          "markerWidth": 13.796875,
+          "lineStarts": [
+            51.796875,
+            51.796875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Lưu ý khi chọn thuốc: Mùa mưa sử dụng COC85 sẽ ổn hơn do khả năng bám dính mạnh; mùa nắng dùng CHAMPION 77WP hiệu quả hơn.",
+          "isList": true,
+          "x": 44.15625,
+          "markerWidth": 6.15625,
+          "lineStarts": [
+            44.15625,
+            44.15625,
+            44.15625,
+            44.15625
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02 (Quét thuốc): Dùng cọ, bàn chải hoặc vải... quét trực tiếp hỗn hợp thuốc nấm đã pha lên thân, cành ở những vị trí bị nấm hồng tấn công.",
+          "isList": true,
+          "x": 43.859375,
+          "markerWidth": 5.859375,
+          "lineStarts": [
+            43.859375,
+            43.859375,
+            43.859375,
+            43.859375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03 (Kiểm tra lại sau 5 - 10 ngày):",
+          "isList": true,
+          "x": 58.4375,
+          "markerWidth": 20.4375,
+          "lineStarts": [
+            58.4375,
+            58.4375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng chưa chết/chưa cháy: Tiếp tục pha thuốc và quét lần 2.",
+          "isList": true,
+          "x": 49.734375,
+          "markerWidth": 11.734375,
+          "lineStarts": [
+            49.734375,
+            49.734375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng đã chết/đã cháy: Tiến hành pha thuốc nấm (như RIDOMIL GOLD hoặc Anvil) xịt lên thân, cành, lá để phòng bệnh.",
+          "isList": true,
+          "x": 44.59375,
+          "markerWidth": 6.59375,
+          "lineStarts": [
+            44.59375,
+            44.59375,
+            44.59375,
+            44.59375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04 (Phòng ngừa sau điều trị): Sau khi xử lý được nấm hồng, cần lưu ý theo dõi cây và chăm sóc định kỳ.",
+          "isList": true,
+          "x": 45.65625,
+          "markerWidth": 7.65625,
+          "lineStarts": [
+            45.65625,
+            45.65625,
+            45.65625
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "case": "headings",
+      "rows": [
+        {
+          "text": "Tiêu đề chính",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát lá",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Theo dõi cây",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Ghi nhận kết quả",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "case": "indentation",
+      "rows": [
+        {
+          "text": "Danh sách với khoảng trắng đầu dòng khác nhau:",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29,
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Không có dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Hai dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Ba dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Một dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "case": "numbered",
+      "rows": [
+        {
+          "text": "Danh sách đánh số",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát kỹ mặt trên và mặt dưới của lá mai trước khi ghi nhận kết quả kiểm tra.",
+          "isList": true,
+          "x": 50.71875,
+          "markerWidth": 12.71875,
+          "lineStarts": [
+            50.71875,
+            50.71875,
+            50.71875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 10: Theo dõi kết quả sau nhiều ngày và ghi lại sự thay đổi của cây trong sổ chăm sóc.",
+          "isList": true,
+          "x": 59.25,
+          "markerWidth": 21.25,
+          "lineStarts": [
+            59.25,
+            59.25,
+            59.25
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "case": "steps",
+      "rows": [
+        {
+          "text": "1. Các bước trị bệnh nấm hồng",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01 (Pha thuốc): Pha hỗn hợp thuốc nấm theo công thức:",
+          "isList": true,
+          "x": 52.53125,
+          "markerWidth": 14.53125,
+          "lineStarts": [
+            52.53125,
+            52.53125
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Pha COC85 tỉ lệ 10g / 50ml nước (hoặc 10g / 70-100ml nước). Có thể thay thế bằng CHAMPION 77WP nấm hồng.",
+          "isList": true,
+          "x": 46.140625,
+          "markerWidth": 8.140625,
+          "lineStarts": [
+            46.140625,
+            46.140625,
+            46.140625
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Hoặc có thể pha: RIDOMIL GOLD tỉ lệ 10g / 50-100ml nước.",
+          "isList": true,
+          "x": 53.234375,
+          "markerWidth": 15.234375,
+          "lineStarts": [
+            53.234375,
+            53.234375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Lưu ý khi chọn thuốc: Mùa mưa sử dụng COC85 sẽ ổn hơn do khả năng bám dính mạnh; mùa nắng dùng CHAMPION 77WP hiệu quả hơn.",
+          "isList": true,
+          "x": 44.796875,
+          "markerWidth": 6.796875,
+          "lineStarts": [
+            44.796875,
+            44.796875,
+            44.796875,
+            44.796875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02 (Quét thuốc): Dùng cọ, bàn chải hoặc vải... quét trực tiếp hỗn hợp thuốc nấm đã pha lên thân, cành ở những vị trí bị nấm hồng tấn công.",
+          "isList": true,
+          "x": 44.46875,
+          "markerWidth": 6.46875,
+          "lineStarts": [
+            44.46875,
+            44.46875,
+            44.46875,
+            44.46875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03 (Kiểm tra lại sau 5 - 10 ngày):",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng chưa chết/chưa cháy: Tiếp tục pha thuốc và quét lần 2.",
+          "isList": true,
+          "x": 50.953125,
+          "markerWidth": 12.953125,
+          "lineStarts": [
+            50.953125,
+            50.953125
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng đã chết/đã cháy: Tiến hành pha thuốc nấm (như RIDOMIL GOLD hoặc Anvil) xịt lên thân, cành, lá để phòng bệnh.",
+          "isList": true,
+          "x": 45.28125,
+          "markerWidth": 7.28125,
+          "lineStarts": [
+            45.28125,
+            45.28125,
+            45.28125,
+            45.28125
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04 (Phòng ngừa sau điều trị): Sau khi xử lý được nấm hồng, cần lưu ý theo dõi cây và chăm sóc định kỳ.",
+          "isList": true,
+          "x": 46.453125,
+          "markerWidth": 8.453125,
+          "lineStarts": [
+            46.453125,
+            46.453125,
+            46.453125
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "case": "headings",
+      "rows": [
+        {
+          "text": "Tiêu đề chính",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát lá",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Theo dõi cây",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Ghi nhận kết quả",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "case": "indentation",
+      "rows": [
+        {
+          "text": "Danh sách với khoảng trắng đầu dòng khác nhau:",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29,
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Không có dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Hai dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Ba dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Một dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "case": "numbered",
+      "rows": [
+        {
+          "text": "Danh sách đánh số",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát kỹ mặt trên và mặt dưới của lá mai trước khi ghi nhận kết quả kiểm tra.",
+          "isList": true,
+          "x": 50.71875,
+          "markerWidth": 12.71875,
+          "lineStarts": [
+            50.71875,
+            50.71875,
+            50.71875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 10: Theo dõi kết quả sau nhiều ngày và ghi lại sự thay đổi của cây trong sổ chăm sóc.",
+          "isList": true,
+          "x": 59.25,
+          "markerWidth": 21.25,
+          "lineStarts": [
+            59.25,
+            59.25,
+            59.25
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 412,
+      "case": "steps",
+      "rows": [
+        {
+          "text": "1. Các bước trị bệnh nấm hồng",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01 (Pha thuốc): Pha hỗn hợp thuốc nấm theo công thức:",
+          "isList": true,
+          "x": 53.53125,
+          "markerWidth": 15.53125,
+          "lineStarts": [
+            53.53125,
+            53.53125
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Pha COC85 tỉ lệ 10g / 50ml nước (hoặc 10g / 70-100ml nước). Có thể thay thế bằng CHAMPION 77WP nấm hồng.",
+          "isList": true,
+          "x": 46.703125,
+          "markerWidth": 8.703125,
+          "lineStarts": [
+            46.703125,
+            46.703125,
+            46.703125
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Hoặc có thể pha: RIDOMIL GOLD tỉ lệ 10g / 50-100ml nước.",
+          "isList": true,
+          "x": 54.28125,
+          "markerWidth": 16.28125,
+          "lineStarts": [
+            54.28125,
+            54.28125
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Lưu ý khi chọn thuốc: Mùa mưa sử dụng COC85 sẽ ổn hơn do khả năng bám dính mạnh; mùa nắng dùng CHAMPION 77WP hiệu quả hơn.",
+          "isList": true,
+          "x": 45.265625,
+          "markerWidth": 7.265625,
+          "lineStarts": [
+            45.265625,
+            45.265625,
+            45.265625,
+            45.265625
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02 (Quét thuốc): Dùng cọ, bàn chải hoặc vải... quét trực tiếp hỗn hợp thuốc nấm đã pha lên thân, cành ở những vị trí bị nấm hồng tấn công.",
+          "isList": true,
+          "x": 44.90625,
+          "markerWidth": 6.90625,
+          "lineStarts": [
+            44.90625,
+            44.90625,
+            44.90625,
+            44.90625
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03 (Kiểm tra lại sau 5 - 10 ngày):",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng chưa chết/chưa cháy: Tiếp tục pha thuốc và quét lần 2.",
+          "isList": true,
+          "x": 51.84375,
+          "markerWidth": 13.84375,
+          "lineStarts": [
+            51.84375,
+            51.84375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng đã chết/đã cháy: Tiến hành pha thuốc nấm (như RIDOMIL GOLD hoặc Anvil) xịt lên thân, cành, lá để phòng bệnh.",
+          "isList": true,
+          "x": 45.78125,
+          "markerWidth": 7.78125,
+          "lineStarts": [
+            45.78125,
+            45.78125,
+            45.78125
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04 (Phòng ngừa sau điều trị): Sau khi xử lý được nấm hồng, cần lưu ý theo dõi cây và chăm sóc định kỳ.",
+          "isList": true,
+          "x": 47.03125,
+          "markerWidth": 9.03125,
+          "lineStarts": [
+            47.03125,
+            47.03125,
+            47.03125
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 412,
+      "case": "headings",
+      "rows": [
+        {
+          "text": "Tiêu đề chính",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát lá",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Theo dõi cây",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Ghi nhận kết quả",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 412,
+      "case": "indentation",
+      "rows": [
+        {
+          "text": "Danh sách với khoảng trắng đầu dòng khác nhau:",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29,
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Không có dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Hai dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Ba dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Một dấu cách.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 412,
+      "case": "numbered",
+      "rows": [
+        {
+          "text": "Danh sách đánh số",
+          "isList": false,
+          "x": 29,
+          "lineStarts": [
+            29
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát kỹ mặt trên và mặt dưới của lá mai trước khi ghi nhận kết quả kiểm tra.",
+          "isList": true,
+          "x": 50.71875,
+          "markerWidth": 12.71875,
+          "lineStarts": [
+            50.71875,
+            50.71875,
+            50.71875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân.",
+          "isList": true,
+          "x": 60,
+          "markerWidth": 22,
+          "lineStarts": [
+            60
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 10: Theo dõi kết quả sau nhiều ngày và ghi lại sự thay đổi của cây trong sổ chăm sóc.",
+          "isList": true,
+          "x": 59.25,
+          "markerWidth": 21.25,
+          "lineStarts": [
+            59.25,
+            59.25,
+            59.25
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "case": "steps",
+      "rows": [
+        {
+          "text": "1. Các bước trị bệnh nấm hồng",
+          "isList": false,
+          "x": 189,
+          "lineStarts": [
+            189
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01 (Pha thuốc): Pha hỗn hợp thuốc nấm theo công thức:",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Pha COC85 tỉ lệ 10g / 50ml nước (hoặc 10g / 70-100ml nước). Có thể thay thế bằng CHAMPION 77WP nấm hồng.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Hoặc có thể pha: RIDOMIL GOLD tỉ lệ 10g / 50-100ml nước.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Lưu ý khi chọn thuốc: Mùa mưa sử dụng COC85 sẽ ổn hơn do khả năng bám dính mạnh; mùa nắng dùng CHAMPION 77WP hiệu quả hơn.",
+          "isList": true,
+          "x": 216.9375,
+          "markerWidth": 18.9375,
+          "lineStarts": [
+            216.9375,
+            216.9375
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02 (Quét thuốc): Dùng cọ, bàn chải hoặc vải... quét trực tiếp hỗn hợp thuốc nấm đã pha lên thân, cành ở những vị trí bị nấm hồng tấn công.",
+          "isList": true,
+          "x": 216.015625,
+          "markerWidth": 18.015625,
+          "lineStarts": [
+            216.015625,
+            216.015625
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03 (Kiểm tra lại sau 5 - 10 ngày):",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng chưa chết/chưa cháy: Tiếp tục pha thuốc và quét lần 2.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Nếu nấm hồng đã chết/đã cháy: Tiến hành pha thuốc nấm (như RIDOMIL GOLD hoặc Anvil) xịt lên thân, cành, lá để phòng bệnh.",
+          "isList": true,
+          "x": 218.296875,
+          "markerWidth": 20.296875,
+          "lineStarts": [
+            218.296875,
+            218.296875
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04 (Phòng ngừa sau điều trị): Sau khi xử lý được nấm hồng, cần lưu ý theo dõi cây và chăm sóc định kỳ.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "case": "headings",
+      "rows": [
+        {
+          "text": "Tiêu đề chính",
+          "isList": false,
+          "x": 189,
+          "lineStarts": [
+            189
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát lá",
+          "isList": false,
+          "x": 189,
+          "lineStarts": [
+            189
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân",
+          "isList": false,
+          "x": 189,
+          "lineStarts": [
+            189
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Theo dõi cây",
+          "isList": false,
+          "x": 189,
+          "lineStarts": [
+            189
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Ghi nhận kết quả",
+          "isList": false,
+          "x": 189,
+          "lineStarts": [
+            189
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "case": "indentation",
+      "rows": [
+        {
+          "text": "Danh sách với khoảng trắng đầu dòng khác nhau:",
+          "isList": false,
+          "x": 189,
+          "lineStarts": [
+            189
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Không có dấu cách.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Hai dấu cách.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 03: Ba dấu cách.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 04: Một dấu cách.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "case": "numbered",
+      "rows": [
+        {
+          "text": "Danh sách đánh số",
+          "isList": false,
+          "x": 189,
+          "lineStarts": [
+            189
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 01: Quan sát kỹ mặt trên và mặt dưới của lá mai trước khi ghi nhận kết quả kiểm tra.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 02: Kiểm tra thân.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        },
+        {
+          "text": "Bước 10: Theo dõi kết quả sau nhiều ngày và ghi lại sự thay đổi của cây trong sổ chăm sóc.",
+          "isList": true,
+          "x": 220,
+          "markerWidth": 22,
+          "lineStarts": [
+            220
+          ],
+          "overflow": false
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "failedRequests": [],
+  "externalRequests": []
+}

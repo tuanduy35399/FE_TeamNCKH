@@ -1,0 +1,29 @@
+
+> maivangapp@1.0.0 check
+> tsc --noEmit
+
+src/components/FloatingCameraFab.tsx(36,20): error TS2322: Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'Ref<ReactNativeElement> | undefined'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<ReactNativeElement | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'ReactNativeElement | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'ReactNativeElement'.
+src/navigation/RootNavigator.tsx(55,16): error TS2322: Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'Ref<ReactNativeElement> | undefined'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<ReactNativeElement | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'ReactNativeElement | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'ReactNativeElement'.
+src/screens/chat/ChatScreen.tsx(517,13): error TS2322: Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'Ref<ReactNativeElement> | undefined'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<ReactNativeElement | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'ReactNativeElement | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'ReactNativeElement'.
+src/screens/chat/ChatScreen.tsx(535,11): error TS2322: Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'Ref<ReactNativeElement> | undefined'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<ReactNativeElement | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'ReactNativeElement | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'ReactNativeElement'.
+src/screens/chat/ChatScreen.tsx(669,13): error TS2322: Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'Ref<ReactNativeElement> | undefined'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<ReactNativeElement | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'ReactNativeElement | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'ReactNativeElement'.
+src/screens/chat/ChatScreen.tsx(689,15): error TS2322: Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'Ref<ReactNativeElement> | undefined'.
+  Type 'RefObject<((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null>' is not assignable to type 'RefObject<ReactNativeElement | null>'.
+    Type '((props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode) | null' is not assignable to type 'ReactNativeElement | null'.
+      Type '(props: Omit<ViewProps, "ref"> & { ref?: Ref<ReactNativeElement> | undefined; }) => ReactNode' is not assignable to type 'ReactNativeElement'.
+src/tutorial/TutorialProvider.tsx(35,83): error TS7031: Binding element 'window' implicitly has an 'any' type.

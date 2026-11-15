@@ -1,0 +1,65 @@
+{
+  "browser": "157.0.8103.50",
+  "timestamp": "2026-11-14T15:49:14.200Z",
+  "results": [
+    {
+      "name": "Chữ chuyển động nhẹ và lệch pha giữa các từ",
+      "status": "PASS"
+    },
+    {
+      "name": "Hiển thị message từ event SSE chia chunk",
+      "status": "PASS"
+    },
+    {
+      "name": "Đổi text không dừng hiệu ứng",
+      "status": "PASS"
+    },
+    {
+      "name": "Không tràn ngang tại 320px",
+      "status": "PASS"
+    },
+    {
+      "name": "Không tràn ngang tại 390px",
+      "status": "PASS"
+    },
+    {
+      "name": "Không tràn ngang tại 1280px",
+      "status": "PASS"
+    },
+    {
+      "name": "Event giai đoạn LLM mới và text dài xuống hàng",
+      "status": "PASS"
+    },
+    {
+      "name": "Hoàn tất dừng sóng và đổi thông báo",
+      "status": "PASS"
+    },
+    {
+      "name": "Thiếu message vẫn hiển thị câu mặc định",
+      "status": "PASS"
+    },
+    {
+      "name": "Tôn trọng cài đặt giảm chuyển động",
+      "status": "PASS"
+    },
+    {
+      "name": "Bật lại chuyển động theo cài đặt hệ thống",
+      "status": "PASS"
+    },
+    {
+      "name": "Lỗi gỡ dòng trạng thái đang chạy",
+      "status": "PASS"
+    },
+    {
+      "name": "Có thể khởi tạo lại rồi gỡ component",
+      "status": "PASS"
+    },
+    {
+      "name": "Không có lỗi JavaScript hoặc console error",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "passed": 14,
+  "failed": 0
+}
