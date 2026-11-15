@@ -63,11 +63,17 @@ import { confidenceLabel, diseaseLabel } from "../../utils/diseaseLabels";
 
 type Props = BottomTabScreenProps<TabParamList, "Chat">;
 type UploadStage = "uploading" | "analyzing";
-const progressIcons = {
-  preparing: require("../../../docs/preparing_icon.png"),
-  processing: require("../../../docs/processing_icon.png"),
-  complete: require("../../../docs/complete_icon.png"),
-} as const;
+
+function ProgressIndicator({ stage }: { stage?: ProgressStage }) {
+  if (stage === "preparing") {
+    return <Ionicons name="time-outline" size={18} color={colors.primary} accessibilityLabel="Đang chuẩn bị câu hỏi" />;
+  }
+  if (stage === "complete") {
+    return <Ionicons name="checkmark-circle" size={18} color={colors.primary} accessibilityLabel="Đã nhận kết quả" />;
+  }
+  return <ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Tiến trình xử lý" />;
+}
+
 const welcomePrompts = [
   "Cách chăm mai sau Tết?",
   "Vì sao lá mai bị vàng?",
@@ -199,6 +205,12 @@ export function ChatScreen({ navigation }: Props) {
     setPickerError('');
     setPickerNeedsSettings(false);
   }, [conversationRevision]);
+  useEffect(() => {
+    if (messages.length) {
+      listRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [messages.length, bottomPanelHeight]);
+
   function startRetryCooldown() {
     if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
     setRetryCoolingDown(true);
@@ -572,10 +584,16 @@ export function ChatScreen({ navigation }: Props) {
                 styles.list,
                 !messages.length && styles.emptyList,
               ]}
-              onContentSizeChange={() =>
-                messages.length &&
-                listRef.current?.scrollToEnd({ animated: false })
-              }
+              onLayout={() => {
+                if (messages.length) {
+                  listRef.current?.scrollToEnd({ animated: false });
+                }
+              }}
+              onContentSizeChange={() => {
+                if (messages.length) {
+                  listRef.current?.scrollToEnd({ animated: false });
+                }
+              }}
               ListEmptyComponent={historyId ? <View testID="empty-history" style={styles.trueEmpty}><Ionicons name="chatbubble-outline" size={28} color={colors.muted} /><Text style={styles.muted}>Cuộc trò chuyện này chưa có tin nhắn.</Text></View> : <Welcome onSelect={setText} />}
               renderItem={({ item, index }) => (
                 <MessageBubble
@@ -597,16 +615,7 @@ export function ChatScreen({ navigation }: Props) {
         <View onLayout={event => setBottomPanelHeight(event.nativeEvent.layout.height)}>
         {(sending || streamStage) && (
           <View style={styles.typing}>
-            {streamStage ? (
-              <Image
-                accessibilityLabel="Tiến trình xử lý"
-                source={progressIcons[streamStage]}
-                resizeMode="contain"
-                style={styles.progressIcon}
-              />
-            ) : (
-              <ActivityIndicator size="small" color={colors.primary} />
-            )}
+            <ProgressIndicator stage={streamStage} />
             <Text style={styles.muted}>
               {streamStage === "preparing"
                 ? "Đang chuẩn bị câu hỏi..."
@@ -961,8 +970,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   loadRetryText: { color: "#fff", fontWeight: "800" },
-  list: { paddingHorizontal: 12, paddingVertical: 14, gap: 11 },
-  emptyList: { flexGrow: 1 },
+  list: { paddingHorizontal: 12, paddingTop: 14, paddingBottom: 84, gap: 11 },
+  emptyList: { flexGrow: 1, paddingBottom: 14 },
   welcome: {
     flex: 1,
     justifyContent: "center",
