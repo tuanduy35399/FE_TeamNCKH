@@ -32,6 +32,7 @@ test('deletes disposable histories through the confirmation UI and verifies serv
   const otherTokens = await loginApi(request, other);
   const ownerHeaders = { Authorization: `Bearer ${ownerTokens.access}` };
   const otherHeaders = { Authorization: `Bearer ${otherTokens.access}` };
+  const ownerAccount = await (await request.get(`${apiOrigin}/api/v1/user/me/`, { headers: ownerHeaders })).json() as { id: number };
   const historyA = await (await request.post(`${apiOrigin}/api/v1/history/`, { data: { title: `History A ${suffix}` }, headers: ownerHeaders })).json() as { id: number };
   const historyB = await (await request.post(`${apiOrigin}/api/v1/history/`, { data: { title: `History B ${suffix}` }, headers: ownerHeaders })).json() as { id: number };
   const otherHistory = await (await request.post(`${apiOrigin}/api/v1/history/`, { data: { title: `Other history ${suffix}` }, headers: otherHeaders })).json() as { id: number };
@@ -51,46 +52,77 @@ test('deletes disposable histories through the confirmation UI and verifies serv
   await page.getByTestId('login-password').fill(owner.password);
   await page.getByTestId('login-submit').click();
   await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 45_000 });
-  await page.getByRole('tab').nth(1).click();
-  await expect(page.getByText(`History A ${suffix}`, { exact: true })).toBeVisible();
-  await expect(page.getByText(`History B ${suffix}`, { exact: true })).toBeVisible();
+  await page.evaluate(({ userId, historyId }) => localStorage.setItem(`@maicare/active-history/${userId}`, String(historyId)), { userId: ownerAccount.id, historyId: historyB.id });
+  await page.reload();
+  const chatScreen = page.getByTestId('chat-screen');
+  await expect(chatScreen.getByText(`History B ${suffix}`, { exact: true })).toBeVisible({ timeout: 45_000 });
+  const historyScreen = page.getByTestId('history-screen');
+  const selectChat = async () => { const tab = page.getByRole('tab').filter({ hasText: 'Trò chuyện' }); await tab.click(); await expect(tab).toHaveAttribute('aria-selected', 'true'); };
+  const selectHistory = async () => { const tab = page.getByRole('tab').filter({ hasText: 'Lịch sử' }); await tab.click(); await expect(tab).toHaveAttribute('aria-selected', 'true'); await expect(historyScreen.getByText(`History B ${suffix}`, { exact: true })).toBeVisible(); };
+  await selectHistory();
+  await expect(historyScreen.getByText(`History A ${suffix}`, { exact: true })).toBeVisible();
+  await expect(historyScreen.getByText(`History B ${suffix}`, { exact: true })).toBeVisible();
 
-  await page.getByRole('button').filter({ hasText: `History B ${suffix}` }).first().click();
-  await expect(page.getByText(`History B ${suffix}`, { exact: true })).toBeVisible();
-  await page.getByRole('tab').nth(1).click();
-  await page.getByLabel(`Tùy chọn cuộc trò chuyện History A ${suffix}`).click();
+  // Cancel leaves A untouched and makes no request.
+  await page.getByLabel(`Tùy chọn cuộc trò chuyện History A ${suffix}`).click({ timeout: 15_000 });
   await page.getByTestId('history-management-modal').getByRole('button', { name: 'Xóa' }).click();
   const confirmation = page.getByTestId('delete-confirmation-modal');
   await expect(confirmation).toBeVisible();
   await expect(confirmation).toContainText(`History A ${suffix}`);
   await expect(confirmation).toContainText('không thể hoàn tác');
   await confirmation.getByRole('button', { name: 'Hủy' }).click();
-  await expect(page.getByText(`History A ${suffix}`, { exact: true })).toBeVisible();
+  await expect(historyScreen.getByText(`History A ${suffix}`, { exact: true })).toBeVisible();
   expect(deleteResponses).toEqual([]);
 
-  await page.getByLabel(`Tùy chọn cuộc trò chuyện History A ${suffix}`).click();
+  // A rejected DELETE preserves both the modal and list item.
+  await page.getByLabel(`Tùy chọn cuộc trò chuyện History A ${suffix}`).click({ timeout: 15_000 });
+  await page.getByTestId('history-management-modal').getByRole('button', { name: 'Xóa' }).click();
+  const historyARoute = `**/api/v1/history/${historyA.id}/`;
+  await page.route(historyARoute, async route => {
+    if (route.request().method() === 'DELETE') await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ detail: 'Injected deletion failure' }) });
+    else await route.continue();
+  });
+  await page.getByTestId('confirm-history-delete').click();
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation.getByRole('alert')).toBeVisible();
+  await expect(historyScreen.getByText(`History A ${suffix}`, { exact: true })).toBeVisible();
+  expect(deleteResponses).toEqual([500]);
+  await confirmation.getByRole('button', { name: 'Hủy' }).click();
+  await page.unroute(historyARoute);
+
+  // A double click produces one successful DELETE.
+  await page.getByLabel(`Tùy chọn cuộc trò chuyện History A ${suffix}`).click({ timeout: 15_000 });
   await page.getByTestId('history-management-modal').getByRole('button', { name: 'Xóa' }).click();
   await page.getByTestId('confirm-history-delete').evaluate(element => { (element as HTMLElement).click(); (element as HTMLElement).click(); });
-  await expect(page.getByText(`History A ${suffix}`, { exact: true })).toHaveCount(0, { timeout: 45_000 });
-  expect(deleteResponses).toEqual([204]);
+  await expect(historyScreen.getByText(`History A ${suffix}`, { exact: true })).toHaveCount(0, { timeout: 45_000 });
+  expect(deleteResponses).toEqual([500, 204]);
   const listAfterA = await request.get(`${apiOrigin}/api/v1/history/`, { headers: ownerHeaders });
   const listAfterAJson = await listAfterA.json() as Array<{ id: number }>;
   expect(listAfterAJson.some(item => item.id === historyA.id)).toBe(false);
   expect(listAfterAJson.some(item => item.id === historyB.id)).toBe(true);
   expect((await request.get(`${apiOrigin}/api/v1/history/${historyA.id}/`, { headers: ownerHeaders })).status()).toBe(404);
   expect((await request.get(`${apiOrigin}/api/v1/history/${historyB.id}/`, { headers: ownerHeaders })).status()).toBe(200);
-  await page.getByRole('tab').nth(0).click();
-  await expect(page.getByText(`History B ${suffix}`, { exact: true })).toBeVisible();
 
-  await page.getByRole('tab').nth(1).click();
-  await page.getByLabel(`Tùy chọn cuộc trò chuyện History B ${suffix}`).click();
+  // Reload proves A stays deleted and inactive deletion preserved active B.
+  await page.reload();
+  await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 45_000 });
+  await selectHistory();
+  await expect(historyScreen.getByText(`History A ${suffix}`, { exact: true })).toHaveCount(0);
+  await expect(historyScreen.getByText(`History B ${suffix}`, { exact: true })).toBeVisible();
+  await selectChat();
+  await expect(chatScreen.getByText(`History B ${suffix}`, { exact: true })).toBeVisible();
+
+  // Deleting active B clears the active chat and leaves the authoritative list empty.
+  await selectHistory();
+  await page.getByLabel(`Tùy chọn cuộc trò chuyện History B ${suffix}`).click({ timeout: 15_000 });
   await page.getByTestId('history-management-modal').getByRole('button', { name: 'Xóa' }).click();
   await page.getByTestId('confirm-history-delete').click();
-  await expect(page.getByText('Chưa có hoạt động nào.', { exact: true })).toBeVisible({ timeout: 45_000 });
-  expect(deleteResponses).toEqual([204, 204]);
+  await expect(historyScreen.getByText('Chưa có hoạt động nào.', { exact: true })).toBeVisible({ timeout: 45_000 });
+  expect(deleteResponses).toEqual([500, 204, 204]);
   expect(await (await request.get(`${apiOrigin}/api/v1/history/`, { headers: ownerHeaders })).json()).toEqual([]);
   expect((await request.get(`${apiOrigin}/api/v1/history/${historyB.id}/`, { headers: ownerHeaders })).status()).toBe(404);
-  await page.getByRole('tab').nth(0).click();
-  await expect(page.getByText('Trợ lý chăm sóc mai vàng', { exact: true })).toBeVisible();
+  await selectChat();
+  await expect(chatScreen.getByText('Trợ lý chăm sóc mai vàng', { exact: true }).first()).toBeVisible();
+  expect(await page.evaluate(userId => localStorage.getItem(`@maicare/active-history/${userId}`), ownerAccount.id)).toBeNull();
   expect(pageErrors).toEqual([]);
 });

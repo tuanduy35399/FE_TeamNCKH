@@ -145,9 +145,9 @@ export function HistoryScreen() {
   }
 
   useFocusEffect(useCallback(() => { void load(); }, [load, historyRevision]));
-  if (loading) return <Screen><LoadingState label="Đang tải lịch sử..." /></Screen>;
-  if (loadFailed && !items.length) return <Screen><View style={styles.header}><Text style={styles.title}>Lịch sử</Text><Text style={styles.subtitle}>Những lần kiểm tra và câu hỏi trước đây</Text></View><StateView icon="time-outline" title="Chưa thể tải lịch sử" message={error} actionLabel="Thử lại" onAction={() => void load()} /></Screen>;
-  return <Screen><View style={styles.header}><Text style={styles.title}>Lịch sử</Text><Text style={styles.subtitle}>Những lần kiểm tra và câu hỏi trước đây</Text></View>
+  if (loading) return <Screen testID="history-screen"><LoadingState label="Đang tải lịch sử..." /></Screen>;
+  if (loadFailed && !items.length) return <Screen testID="history-screen"><View style={styles.header}><Text style={styles.title}>Lịch sử</Text><Text style={styles.subtitle}>Những lần kiểm tra và câu hỏi trước đây</Text></View><StateView icon="time-outline" title="Chưa thể tải lịch sử" message={error} actionLabel="Thử lại" onAction={() => void load()} /></Screen>;
+  return <Screen testID="history-screen"><View style={styles.header}><Text style={styles.title}>Lịch sử</Text><Text style={styles.subtitle}>Những lần kiểm tra và câu hỏi trước đây</Text></View>
     {!!error && <Pressable accessibilityRole="button" onPress={() => void load(true)} style={styles.errorBanner}><Ionicons name="alert-circle-outline" size={18} color={colors.danger} /><Text accessibilityRole="alert" style={styles.errorText}>{error} Nhấn để thử lại.</Text></Pressable>}
     <FlatList data={items} keyExtractor={item => String(item.id)} contentContainerStyle={[styles.list, !items.length && styles.emptyList]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={colors.primary} />}
       ListEmptyComponent={<StateView title="Chưa có hoạt động nào." />}
