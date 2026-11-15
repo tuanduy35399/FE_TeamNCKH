@@ -1,7 +1,7 @@
 /**
  * Standalone Sandbox Test Runner for FloatingCameraFab & ChatScreen Layout
  * 
- * Run with: node tuanduy_bao_tri/run_sandbox.mjs
+ * Run with: node MaiVangApp/huutuong_bao_tri/run_sandbox.mjs
  */
 
 import { strict as assert } from 'node:assert';

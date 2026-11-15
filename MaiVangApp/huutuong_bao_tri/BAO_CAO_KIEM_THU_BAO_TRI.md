@@ -119,10 +119,10 @@ KeyboardAvoidingView (flex: 1)
 - Chạy trực tiếp qua lệnh: `npm test` bên trong `MaiVangApp/`.
 
 ### 5.2. Tầng 2: Standalone Sandbox Test Runner độc lập
-- File: [run_sandbox.mjs](file:///d:/NLCN/NCKH/tuanduy_bao_tri/run_sandbox.mjs)
+- File: [run_sandbox.mjs](file:///d:/NLCN/NCKH/MaiVangApp/huutuong_bao_tri/run_sandbox.mjs)
 - Chạy độc lập mà không cần môi trường React Native:
   ```bash
-  node tuanduy_bao_tri/run_sandbox.mjs
+  node MaiVangApp/huutuong_bao_tri/run_sandbox.mjs
   ```
 
 ### 5.3. Kết quả Thực nghiệm Sandbox (Simulation Results)
