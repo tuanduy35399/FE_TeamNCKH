@@ -1,4 +1,4 @@
-import { AI_TIMEOUT_MS, IMAGE_TIMEOUT_MS, getApiBaseUrl } from './config';
+import { AI_TIMEOUT_MS, AUTH_TIMEOUT_MS, IMAGE_TIMEOUT_MS, getApiBaseUrl } from './config';
 import { apiNativeMultipartUpload, apiRequest, apiStreamRequest } from './client';
 import { HISTORY_ENDPOINTS } from './endpoints';
 import { normalizeHistoryDetail, normalizeHistoryItem } from './normalizers';
@@ -33,8 +33,8 @@ export async function getHistoryDetail(id: number): Promise<HistoryItem> {
 export async function createHistory(title: string): Promise<HistoryItem> {
   return normalizeHistoryItem(await apiRequest<HistoryListDto>(HISTORY_ENDPOINTS.list, { method: 'POST', auth: true, body: JSON.stringify({ title }) }));
 }
-export async function deleteHistory(id: number): Promise<void> {
-  await apiRequest(HISTORY_ENDPOINTS.detail(id), { method: 'DELETE', auth: true });
+export async function deleteHistory(id: number, timeoutMs = AUTH_TIMEOUT_MS): Promise<void> {
+  await apiRequest(HISTORY_ENDPOINTS.detail(id), { method: 'DELETE', auth: true, timeoutMs });
 }
 export async function renameHistory(id: number, title: string): Promise<HistoryItem> {
   return normalizeHistoryDetail(await apiRequest<HistoryDetailDto>(HISTORY_ENDPOINTS.detail(id), { method: 'PATCH', auth: true, body: JSON.stringify({ title }) }));

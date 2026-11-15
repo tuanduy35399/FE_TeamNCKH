@@ -24,6 +24,7 @@ type SessionContext = {
   beginGeneration: () => number;
   isCurrentGeneration: (token: number) => boolean;
   invalidateHistory: () => void;
+  clearHistoryIfActive: (id: number) => boolean;
 };
 
 const ChatSessionContext = createContext<SessionContext | null>(null);
@@ -40,6 +41,8 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
   const [conversationRevision, setConversationRevision] = useState(0);
   const generation = useRef(0);
   const restoredUser = useRef<number | undefined>(undefined);
+  const currentHistoryIdRef = useRef<number | null>(null);
+  currentHistoryIdRef.current = currentHistoryId;
 
   const beginGeneration = useCallback(() => ++generation.current, []);
   const isCurrentGeneration = useCallback((token: number) => token === generation.current, []);
@@ -56,6 +59,12 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
     setLoadingHistory(false);
     if (account?.id) void saveActiveHistoryId(account.id, null);
   }, [account?.id, beginGeneration]);
+
+  const clearHistoryIfActive = useCallback((id: number) => {
+    if (currentHistoryIdRef.current !== id) return false;
+    newChat();
+    return true;
+  }, [newChat]);
 
   const openHistory = useCallback(async (id: number) => {
     if (!Number.isInteger(id) || id <= 0) return false;
@@ -113,8 +122,8 @@ export function ChatSessionProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<SessionContext>(() => ({
     currentHistoryId, historyTitle, messages, loadingHistory, historyLoadError, historyLoadTarget, historyRevision, conversationRevision,
-    setCurrentHistoryId, setHistoryTitle, setMessages, openHistory, newChat, beginGeneration, isCurrentGeneration, invalidateHistory,
-  }), [currentHistoryId, historyTitle, messages, loadingHistory, historyLoadError, historyLoadTarget, historyRevision, conversationRevision, openHistory, newChat, beginGeneration, isCurrentGeneration, invalidateHistory]);
+    setCurrentHistoryId, setHistoryTitle, setMessages, openHistory, newChat, beginGeneration, isCurrentGeneration, invalidateHistory, clearHistoryIfActive,
+  }), [currentHistoryId, historyTitle, messages, loadingHistory, historyLoadError, historyLoadTarget, historyRevision, conversationRevision, openHistory, newChat, beginGeneration, isCurrentGeneration, invalidateHistory, clearHistoryIfActive]);
   return <ChatSessionContext.Provider value={value}>{children}</ChatSessionContext.Provider>;
 }
 

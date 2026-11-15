@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { Detection, SelectedImage } from '../types/domain';
 import { diagnosisMetadataStorageKey, safeUserId } from '../storage/keys';
+import { recordsWithoutConversation } from './localImageHistoryScope';
 
 const VERSION = 1;
 const DB_NAME = 'maicare-image-history';
@@ -164,6 +165,28 @@ export async function getLocalImageHistoryItems(userId: number, conversationId: 
       return blob ? { ...record, imageUri: URL.createObjectURL(blob), transientImageUri: true } : record;
     } catch { return record; }
   }));
+}
+
+export async function deleteLocalImageHistoryForConversation(userId: number, conversationId: number): Promise<void> {
+  if (!safeUserId(userId) || !Number.isInteger(conversationId) || conversationId <= 0) return;
+  const records = await readMetadata(userId);
+  const matching = records.filter(record => record.userId === userId && record.conversationId === conversationId);
+  if (!matching.length) return;
+  const failures: unknown[] = [];
+  if (Platform.OS === 'web') {
+    const keys = new Set(matching.flatMap(record => [imageKey(record), `${userId}:${conversationId}`]));
+    await Promise.all([...keys].map(async key => {
+      try { await deleteWebImage(key); } catch (error) { failures.push(error); }
+    }));
+  } else {
+    const directory = nativeDirectory(userId);
+    if (directory) await Promise.all(matching.map(async record => {
+      if (!record.storedImageUri || !record.storedImageUri.startsWith(directory)) return;
+      try { await FileSystem.deleteAsync(record.storedImageUri, { idempotent: true }); } catch (error) { failures.push(error); }
+    }));
+  }
+  await writeMetadata(userId, recordsWithoutConversation(records, userId, conversationId));
+  if (failures.length) throw new AggregateError(failures, 'Some local conversation images could not be removed.');
 }
 
 export async function clearLocalImageHistoryForUser(userId: number) {
