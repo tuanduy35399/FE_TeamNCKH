@@ -36,9 +36,26 @@ const icons: Record<keyof TabParamList, keyof typeof Ionicons.glyphMap> = { Chat
 const labels: Record<keyof TabParamList, string> = { Chat: 'Trò chuyện', History: 'Lịch sử', Account: 'Tài khoản' };
 function AppTabs() {
   const insets = useSafeAreaInsets();
+  const bottomMargin = Math.max(10, insets.bottom);
   return <Tabs.Navigator screenOptions={({ route }) => ({
     headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted,
-    tabBarStyle: { height: tabBarHeight(insets.bottom), paddingTop: 7, paddingBottom: bottomSafePadding(insets.bottom), borderTopColor: colors.border },
+    tabBarStyle: {
+      backgroundColor: colors.surface,
+      borderRadius: 30,
+      marginHorizontal: 16,
+      marginBottom: bottomMargin,
+      height: 60,
+      paddingTop: 6,
+      paddingBottom: 6,
+      borderTopWidth: 0,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: '#143725',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.10,
+      shadowRadius: 10,
+      elevation: 6,
+    },
     tabBarHideOnKeyboard: true,
     tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.medium },
     tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <TutorialTabIcon routeName={route.name} color={color} size={size} />,

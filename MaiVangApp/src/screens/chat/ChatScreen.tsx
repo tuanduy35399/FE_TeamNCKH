@@ -29,7 +29,8 @@ import { ApiError } from "../../api/errors";
 import { useAuth } from "../../auth/AuthProvider";
 import { AssistantContent } from "../../components/AssistantContent";
 import { WaveText } from "../../components/WaveText";
-import { saveLocalImageHistory } from "../../history/imageHistory";
+import { getLocalImageHistoryItems, saveLocalImageHistory } from "../../history/imageHistory";
+import { mergeLocalImageTurns } from "../../history/imageHistoryMerge";
 import { saveActiveHistoryId } from "../../chat/storage";
 import { useChatSession } from "../../chat/ChatSessionProvider";
 import { FloatingCameraFab } from "../../components/FloatingCameraFab";
@@ -302,7 +303,23 @@ export function ChatScreen({ navigation }: Props) {
     const next = selected
       ? attachImageResult(serverMessages, selected, detections)
       : serverMessages;
-    setMessages(next);
+    setMessages(current => next.map(message => {
+      if (message.role !== 'user' || message.imageUri) return message;
+      const previous = current.find(item => item.id === message.id && item.role === 'user');
+      return previous?.imageUri
+        ? { ...message, imageUri: previous.imageUri, imageWidth: previous.imageWidth, imageHeight: previous.imageHeight, detections: previous.detections }
+        : message;
+    }));
+    if (account?.id) {
+      try {
+        const records = await getLocalImageHistoryItems(account.id, targetId);
+        if (generationToken === undefined || isCurrentGeneration(generationToken)) {
+          setMessages(current => mergeLocalImageTurns(current, records));
+        }
+      } catch {
+        // Keep any image URI already present in the current chat state.
+      }
+    }
     return next;
   }
   async function send(
@@ -639,7 +656,7 @@ export function ChatScreen({ navigation }: Props) {
             onRemove={removeImage}
           />
         )}
-        {(image || preparingImage) && failed?.kind !== "image" && (
+        {!sending && (image || preparingImage) && failed?.kind !== "image" && (
           <View style={styles.diagnosisTray}>
             {image ? (
               <View testID="selected-image" style={styles.previewRow}>
@@ -681,7 +698,7 @@ export function ChatScreen({ navigation }: Props) {
               onChangeText={setText}
               editable={!sending && !loading && !historyLoadError && !failed}
               placeholder={
-                image
+                image && !sending
                   ? "Thêm câu hỏi (không bắt buộc)..."
                   : "Nhắn tin cho MaiCare..."
               }
@@ -697,20 +714,20 @@ export function ChatScreen({ navigation }: Props) {
             >
               <Pressable
                 testID="chat-send"
-                accessibilityLabel={image ? "Gửi chẩn đoán" : "Gửi"}
+                accessibilityLabel={image && !sending ? "Gửi chẩn đoán" : "Gửi"}
                 disabled={!canSend}
                 onPress={() => void send()}
                 style={[
                   styles.send,
-                  image && styles.diagnosisSend,
+                  image && !sending && styles.diagnosisSend,
                   !canSend &&
                     styles.sendDisabled,
                 ]}
               >
-                {image ? (
+                {image && !sending ? (
                   <Text style={styles.diagnosisSendText}>Gửi chẩn đoán</Text>
                 ) : (
-                  <Ionicons name="arrow-up" size={21} color="#fff" />
+                  <Ionicons name="arrow-up" size={19} color="#fff" />
                 )}
               </Pressable>
             </View>
@@ -770,21 +787,35 @@ function MessageBubble({
   const showSuggestions =
     message.role === "assistant" &&
     (diagnosis || isWeakContextAnswer(message.content));
+  const firstDetection = diagnosis ? message.detections?.[0] : undefined;
+  const detectedDisease =
+    firstDetection
+      ? firstDetection.diseaseName || diseaseLabel(firstDetection.label)
+      : undefined;
   const prompts = showSuggestions
-    ? followUpSuggestions(sourceQuestion, diagnosis)
+    ? followUpSuggestions(sourceQuestion, diagnosis, detectedDisease)
     : [];
   return (
     <View
       testID={user ? "user-message" : "assistant-message"}
       style={[styles.messageRow, user && styles.userRow]}
     >
+      {user && message.imageUri ? (
+        <View style={styles.imageMessage}>
+          <DiagnosedImage message={message} />
+          {!!message.content && message.content !== 'Đã gửi một ảnh để chẩn đoán.' && (
+            <View style={[styles.bubble, styles.userBubble]}>
+              <Text style={styles.userText}>{message.content}</Text>
+            </View>
+          )}
+        </View>
+      ) : (
       <View
         style={[
           styles.bubble,
           user ? styles.userBubble : styles.assistantBubble,
         ]}
       >
-        {message.imageUri && <DiagnosedImage message={message} />}
         {user && !!message.content && (
           <Text style={styles.userText}>{message.content}</Text>
         )}
@@ -844,22 +875,29 @@ function MessageBubble({
           </View>
         )}
       </View>
+      )}
     </View>
   );
 }
 function DiagnosedImage({ message }: { message: ChatMessage }) {
+  const [availableWidth, setAvailableWidth] = useState(0);
   const [frame, setFrame] = useState({ width: 0, height: 0 });
   const [source, setSource] = useState({ width: message.imageWidth || 0, height: message.imageHeight || 0 });
   useEffect(() => {
     if (!message.imageUri || source.width > 0 || source.height > 0) return;
     Image.getSize(message.imageUri, (width, height) => setSource({ width, height }), () => undefined);
   }, [message.imageUri, source.height, source.width]);
-  return <View testID="diagnosed-image" onLayout={event => setFrame(event.nativeEvent.layout)} style={styles.messageImageFrame}>
-    <Image source={{ uri: message.imageUri }} resizeMode="contain" style={styles.messageImage} />
-    {message.detections?.map((detection, index) => {
-      const box = detection.bbox && scaleContainedBoundingBox(detection.bbox, source, frame);
-      return box ? <View key={`${detection.label}-${index}`} testID="detection-box" pointerEvents="none" style={[styles.boundingBox, box]}><Text numberOfLines={1} style={styles.boundingLabel}>{diseaseLabel(detection.label)}</Text></View> : null;
-    })}
+  const displayWidth = Math.min(availableWidth, 440);
+  const aspectRatio = source.width > 0 && source.height > 0 ? source.height / source.width : 1;
+  const displayHeight = Math.min(340, Math.max(220, displayWidth * aspectRatio));
+  return <View onLayout={event => setAvailableWidth(event.nativeEvent.layout.width)} style={styles.messageImageSlot}>
+    {displayWidth > 0 && <View testID="diagnosed-image" onLayout={event => setFrame(event.nativeEvent.layout)} style={[styles.messageImageFrame, { width: displayWidth, height: displayHeight }]}>
+      <Image source={{ uri: message.imageUri }} resizeMode="contain" style={styles.messageImage} />
+      {message.detections?.map((detection, index) => {
+        const box = detection.bbox && scaleContainedBoundingBox(detection.bbox, source, frame);
+        return box ? <View key={`${detection.label}-${index}`} testID="detection-box" pointerEvents="none" style={[styles.boundingBox, box]}><Text numberOfLines={1} style={styles.boundingLabel}>{diseaseLabel(detection.label)}</Text></View> : null;
+      })}
+    </View>}
   </View>;
 }
 function RequestError({
@@ -1018,13 +1056,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 5,
   },
   userText: { color: "#fff", fontSize: 15, lineHeight: 22, flexShrink: 1 },
+  imageMessage: { alignItems: 'flex-end', width: '100%', paddingHorizontal: 4, gap: 8 },
+  messageImageSlot: { width: '100%', alignItems: 'flex-end' },
   messageImageFrame: {
-    width: 196,
-    height: 146,
-    maxWidth: "100%",
-    borderRadius: 12,
-    backgroundColor: colors.primarySoft,
-    marginBottom: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     overflow: "hidden",
   },
   messageImage: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },
@@ -1125,45 +1163,51 @@ const styles = StyleSheet.create({
   },
   smallActionText: { color: colors.primary, fontWeight: "800" },
   composer: {
-    paddingHorizontal: 9,
-    paddingTop: 7,
-    paddingBottom: Platform.OS === "android" ? 9 : 7,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: Platform.OS === "android" ? 6 : 4,
+    backgroundColor: "transparent",
+    borderTopWidth: 0,
     gap: 8,
   },
   inputShell: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 7,
+    alignItems: "center",
+    gap: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 23,
-    backgroundColor: colors.background,
-    paddingLeft: 13,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    paddingLeft: 15,
     paddingRight: 4,
-    paddingVertical: 4,
+    paddingVertical: 3,
+    shadowColor: "#143725",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   input: {
     flex: 1,
-    minHeight: 38,
-    maxHeight: 112,
-    paddingTop: 8,
-    paddingBottom: 8,
+    minHeight: 36,
+    maxHeight: 100,
+    paddingTop: Platform.OS === "android" ? 4 : 7,
+    paddingBottom: Platform.OS === "android" ? 4 : 7,
+    paddingHorizontal: 0,
+    textAlignVertical: "center",
     color: colors.text,
     fontSize: 15,
-    lineHeight: 21,
+    lineHeight: 20,
   },
   send: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  diagnosisSend: { width: "auto", minWidth: 124, paddingHorizontal: 14 },
+  diagnosisSend: { width: "auto", minWidth: 116, height: 34, paddingHorizontal: 14 },
   diagnosisSendText: { color: "#fff", fontSize: 13, fontWeight: "900" },
   sendDisabled: { backgroundColor: colors.disabled },
 });

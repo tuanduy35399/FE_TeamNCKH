@@ -17,8 +17,33 @@ export function topicFromQuestion(question: string): string {
   return shortened.length >= 3 && shortened.length <= 80 ? shortened : 'tình trạng này';
 }
 
-export function followUpSuggestions(question: string, diagnosis = false): string[] {
-  if (diagnosis) return ['Triệu chứng điển hình là gì?', 'Cách phòng ngừa?', 'Cách chăm sóc cây?', 'Khi nào nên kiểm tra lại?'];
+export function followUpSuggestions(question: string, diagnosis = false, disease?: string): string[] {
+  if (diagnosis) {
+    const rawDisease = disease?.trim();
+    if (rawDisease && rawDisease !== 'Lá khỏe' && rawDisease !== 'Lớp bệnh chưa xác định') {
+      const cleanDisease = rawDisease.replace(/^bệnh\s+/i, '').trim();
+      return [
+        `Bệnh ${cleanDisease} trên ảnh dùng thuốc gì đặc trị?`,
+        `Bệnh ${cleanDisease} trên ảnh do nguyên nhân nào gây ra?`,
+        `Phác đồ phun thuốc luân phiên trị ${cleanDisease} ra sao?`,
+        `Lá mai bị ${cleanDisease} như trên ảnh có phục hồi được không?`,
+      ];
+    }
+    if (rawDisease === 'Lá khỏe') {
+      return [
+        'Cách chăm sóc để lá mai luôn xanh tốt?',
+        'Cần bón phân gì cho cây mai giai đoạn này?',
+        'Cách phòng ngừa bệnh nấm lá cho mai vàng?',
+        'Bao lâu thì nên kiểm tra sâu bệnh định kỳ?',
+      ];
+    }
+    return [
+      'Bệnh trên ảnh dùng thuốc gì đặc trị?',
+      'Bệnh trên ảnh do nguyên nhân nào gây ra?',
+      'Phác đồ phun thuốc luân phiên trị bệnh trên ảnh ra sao?',
+      'Lá mai bị như trên ảnh có phục hồi được không?',
+    ];
+  }
   const topic = topicFromQuestion(question);
   return [
     `Triệu chứng ${topic} trên mai vàng là gì?`,

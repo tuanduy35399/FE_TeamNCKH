@@ -6,8 +6,10 @@ test('localizes every supported model alias to Vietnamese', () => {
   const cases: Record<string, string> = {
     rust: 'Rỉ sắt', 'ri-sat': 'Rỉ sắt', ri_sat: 'Rỉ sắt', 'rỉ sắt': 'Rỉ sắt',
     anthracnose: 'Thán thư', 'than-thu': 'Thán thư', than_thu: 'Thán thư', 'thán thư': 'Thán thư',
+    colletotrichum_anthracnose: 'Thán thư', glomerella_anthracnose: 'Thán thư',
     red_spider: 'Nhện đỏ', spider_mite: 'Nhện đỏ', 'nhen-do': 'Nhện đỏ', nhen_do: 'Nhện đỏ', 'nhện đỏ': 'Nhện đỏ',
     leaf_spot: 'Đốm lá', 'dom-la': 'Đốm lá', dom_la: 'Đốm lá', 'đốm lá': 'Đốm lá',
+    alternaria_leaf_spot: 'Đốm lá', pestalotia_leaf_spot: 'Cháy lá',
     healthy: 'Lá khỏe', healthy_leaf: 'Lá khỏe', 'healthy-leaf': 'Lá khỏe', 'la-khoe': 'Lá khỏe', la_khoe: 'Lá khỏe', 'lá khỏe': 'Lá khỏe',
   };
   for (const [input, expected] of Object.entries(cases)) assert.equal(diseaseLabel(input), expected, input);
