@@ -44,9 +44,7 @@ function AppTabs() {
       borderRadius: 30,
       marginHorizontal: 16,
       marginBottom: bottomMargin,
-      height: 60,
-      paddingTop: 6,
-      paddingBottom: 6,
+      height: 64,
       borderTopWidth: 0,
       borderWidth: 1,
       borderColor: colors.border,
@@ -56,9 +54,15 @@ function AppTabs() {
       shadowRadius: 10,
       elevation: 6,
     },
+    tabBarItemStyle: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: 6,
+      paddingBottom: 6,
+    },
     tabBarHideOnKeyboard: true,
-    tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.medium },
-    tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <TutorialTabIcon routeName={route.name} color={color} size={size} />,
+    tabBarLabelStyle: { fontSize: 11, fontFamily: fonts.medium, marginTop: 2 },
+    tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <TutorialTabIcon routeName={route.name} color={color} size={Math.min(size, 22)} />,
   })}>
     <Tabs.Screen name="Chat" component={ChatScreen} />
     <Tabs.Screen name="History" component={HistoryScreen} />

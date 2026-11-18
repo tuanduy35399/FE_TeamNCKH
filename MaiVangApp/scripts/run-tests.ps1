@@ -11,5 +11,5 @@ $esbuild = Join-Path $root 'node_modules\@esbuild\win32-x64\esbuild.exe'
 & $esbuild @tests --bundle --platform=node --format=cjs --external:expo-file-system/legacy --outdir=$output
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $built = @(Get-ChildItem -LiteralPath $output -Filter '*.test.js' -Recurse | ForEach-Object FullName)
-& node --test --test-isolation=none @built
+& node --test @built
 exit $LASTEXITCODE

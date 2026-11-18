@@ -704,8 +704,9 @@ export function ChatScreen({ navigation }: Props) {
               }
               placeholderTextColor={colors.muted}
               multiline
+              numberOfLines={1}
               maxLength={4000}
-              style={styles.input}
+              style={[styles.input, !text && styles.inputSingleLine]}
             />
             <View
               ref={sendRef}
@@ -1179,8 +1180,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: colors.surface,
     paddingLeft: 15,
-    paddingRight: 4,
-    paddingVertical: 3,
+    paddingRight: 5,
+    paddingVertical: 4,
+    minHeight: 44,
     shadowColor: "#143725",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -1189,15 +1191,19 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 36,
+    minHeight: 22,
     maxHeight: 100,
-    paddingTop: Platform.OS === "android" ? 4 : 7,
-    paddingBottom: Platform.OS === "android" ? 4 : 7,
+    paddingTop: 0,
+    paddingBottom: 0,
     paddingHorizontal: 0,
+    margin: 0,
     textAlignVertical: "center",
     color: colors.text,
     fontSize: 15,
-    lineHeight: 20,
+    lineHeight: 22,
+  },
+  inputSingleLine: {
+    height: 24,
   },
   send: {
     width: 34,
