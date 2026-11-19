@@ -11,6 +11,8 @@ const aliases: Record<string, string> = {
   'leaf spot': 'Đốm lá',
   'alternaria leaf spot': 'Đốm lá',
   'pestalotia leaf spot': 'Cháy lá',
+  'pink disease': 'Bệnh hồng',
+  'benh hong': 'Bệnh hồng',
   'dom la': 'Đốm lá',
   healthy: 'Lá khỏe',
   'healthy leaf': 'Lá khỏe',
@@ -20,6 +22,30 @@ const aliases: Record<string, string> = {
 function aliasKey(value: string) {
   return value.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+}
+
+// Colors sampled from the supplied model-class palette. Keep the model label
+// here: the two anthracnose classes share a Vietnamese label but have different colors.
+export const diseaseColors: Record<string, string> = {
+  'alternaria leaf spot': '#FE0057',
+  'colletotrichum anthracnose': '#00B6EA',
+  'glomerella anthracnose': '#00FFCD',
+  healthy: '#FF7F00',
+  'pestalotia leaf spot': '#8527FF',
+  'pink disease': '#FFFE00',
+};
+
+export function diseaseColor(value?: string) {
+  const key = aliasKey(value || '');
+  if (diseaseColors[key]) return diseaseColors[key];
+  // Older history may only contain the generic disease name.
+  const legacyClasses: Record<string, string> = {
+    'leaf spot': 'alternaria leaf spot', 'dom la': 'alternaria leaf spot',
+    anthracnose: 'colletotrichum anthracnose', 'than thu': 'colletotrichum anthracnose',
+    'chay la': 'pestalotia leaf spot', 'benh hong': 'pink disease',
+    'healthy leaf': 'healthy', 'la khoe': 'healthy',
+  };
+  return diseaseColors[legacyClasses[key] || ''] || '#B8C4BE';
 }
 
 /** Localizes known model classes and safely humanizes future unknown labels. */

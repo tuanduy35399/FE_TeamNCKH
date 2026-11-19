@@ -59,7 +59,7 @@ import { useTutorial } from "../../tutorial/TutorialProvider";
 import { colors, radius, spacing } from "../../theme";
 import { progressForEvent, type ProgressDisplay, type ProgressStage } from "../../chat/streamProgress";
 import type { ChatMessage, Detection, SelectedImage } from "../../types/domain";
-import { confidenceLabel, diseaseLabel } from "../../utils/diseaseLabels";
+import { confidenceLabel, diseaseColor, diseaseLabel } from "../../utils/diseaseLabels";
 
 type UploadStage = "uploading" | "analyzing";
 
@@ -823,21 +823,23 @@ function MessageBubble({
             {message.detections!.length ? (
               message.detections!.map((detection, index) => {
                 const name = diseaseLabel(detection.label);
+                const color = diseaseColor(detection.label);
                 const confidence = confidenceLabel(detection.confidence);
                 return (
                   <View
                     key={`${detection.label}-${index}`}
+                    testID="detection-result"
                     accessibilityLabel={`${name}${confidence ? `, độ tin cậy ${confidence}` : ""}`}
                     style={styles.detectionRow}
                   >
                     <Ionicons
                       name="leaf-outline"
                       size={16}
-                      color={colors.primary}
+                      color={color}
                     />
-                    <Text style={styles.detectionText}>{name}</Text>
+                    <Text style={[styles.detectionText, { color }]}>{name}</Text>
                     {confidence && (
-                      <Text style={styles.confidence}>{confidence}</Text>
+                      <Text style={[styles.confidence, { color }]}>{confidence}</Text>
                     )}
                   </View>
                 );
@@ -893,7 +895,8 @@ function DiagnosedImage({ message }: { message: ChatMessage }) {
       <Image source={{ uri: message.imageUri }} resizeMode="contain" style={styles.messageImage} />
       {message.detections?.map((detection, index) => {
         const box = detection.bbox && scaleContainedBoundingBox(detection.bbox, source, frame);
-        return box ? <View key={`${detection.label}-${index}`} testID="detection-box" pointerEvents="none" style={[styles.boundingBox, box]}><Text numberOfLines={1} style={styles.boundingLabel}>{diseaseLabel(detection.label)}</Text></View> : null;
+        const color = diseaseColor(detection.label);
+        return box ? <View key={`${detection.label}-${index}`} testID="detection-box" pointerEvents="none" style={[styles.boundingBox, box, { borderColor: color, backgroundColor: `${color}14` }]}><Text numberOfLines={1} style={[styles.boundingLabel, { backgroundColor: color, color: color === '#8527FF' ? '#FFFFFF' : '#101820' }]}>{diseaseLabel(detection.label)}</Text></View> : null;
       })}
     </View>}
   </View>;
@@ -1065,8 +1068,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   messageImage: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },
-  boundingBox: { position: "absolute", borderWidth: 2, borderColor: "#FFD65A", backgroundColor: "rgba(255,214,90,0.08)" },
-  boundingLabel: { position: "absolute", left: -2, top: -20, maxWidth: 150, paddingHorizontal: 4, paddingVertical: 2, color: "#13291C", backgroundColor: "#FFD65A", fontSize: 10, fontWeight: "900" },
+  boundingBox: { position: "absolute", borderWidth: 2 },
+  boundingLabel: { position: "absolute", left: -2, top: -20, maxWidth: 150, paddingHorizontal: 4, paddingVertical: 2, color: "#101820", fontSize: 10, fontWeight: "900" },
   diagnosisResult: {
     gap: 7,
     paddingBottom: 11,
@@ -1075,9 +1078,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   resultTitle: { color: colors.primaryDark, fontSize: 16, fontWeight: "900" },
-  detectionRow: { flexDirection: "row", alignItems: "center", gap: 7 },
-  detectionText: { flex: 1, color: colors.text, fontWeight: "700" },
-  confidence: { color: colors.primaryDark, fontWeight: "900" },
+  detectionRow: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "#101820", padding: 10, borderRadius: radius.sm },
+  detectionText: { flex: 1, fontWeight: "700" },
+  confidence: { fontWeight: "900" },
   noDetection: { color: colors.muted, fontStyle: "italic", lineHeight: 20 },
   followUps: {
     gap: 7,
