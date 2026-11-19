@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -60,10 +59,8 @@ import { useTutorial } from "../../tutorial/TutorialProvider";
 import { colors, radius, spacing } from "../../theme";
 import { progressForEvent, type ProgressDisplay, type ProgressStage } from "../../chat/streamProgress";
 import type { ChatMessage, Detection, SelectedImage } from "../../types/domain";
-import type { TabParamList } from "../../navigation/types";
 import { confidenceLabel, diseaseLabel } from "../../utils/diseaseLabels";
 
-type Props = BottomTabScreenProps<TabParamList, "Chat">;
 type UploadStage = "uploading" | "analyzing";
 
 function ProgressIndicator({ stage }: { stage?: ProgressStage }) {
@@ -140,7 +137,7 @@ function attachImageResult(
   );
 }
 
-export function ChatScreen({ navigation }: Props) {
+export function ChatScreen() {
   const { account } = useAuth();
   const { registerTarget } = useTutorial();
   const {
@@ -526,13 +523,13 @@ export function ChatScreen({ navigation }: Props) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.header}>
-          <Pressable
-            accessibilityLabel="Mở lịch sử"
-            onPress={() => navigation.navigate("History")}
-            style={styles.headerButton}
-          >
-            <Ionicons name="menu" size={23} color={colors.primaryDark} />
-          </Pressable>
+          <View
+            testID="header-alignment-spacer"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            pointerEvents="none"
+            style={styles.headerSpacer}
+          />
           <View style={styles.brand}>
             <Text numberOfLines={1} style={styles.brandTitle}>
               MaiCare AI
@@ -966,6 +963,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 22,
   },
+  headerSpacer: { width: 44, height: 44 },
   brand: { flex: 1, alignItems: "center", paddingHorizontal: 4 },
   brandTitle: { color: colors.primaryDark, fontSize: 17, fontWeight: "900" },
   brandSubtitle: {
