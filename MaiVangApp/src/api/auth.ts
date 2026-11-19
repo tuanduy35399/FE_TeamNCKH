@@ -8,6 +8,12 @@ export type RegistrationRequest = { username: string; name: string; email: strin
 export async function register(input: RegistrationRequest): Promise<void> {
   await apiRequest(AUTH_ENDPOINTS.register, { method: 'POST', body: JSON.stringify(input) });
 }
+export async function requestPasswordReset(email: string): Promise<void> {
+  await apiRequest(AUTH_ENDPOINTS.passwordResetRequest, { method: 'POST', body: JSON.stringify({ email }) });
+}
+export async function confirmPasswordReset(email: string, otp: string, new_password: string): Promise<void> {
+  await apiRequest(AUTH_ENDPOINTS.passwordResetConfirm, { method: 'POST', body: JSON.stringify({ email, otp, new_password }) });
+}
 export async function login(username: string, password: string): Promise<Session> {
   const result = await apiRequest<{ access?: unknown; refresh?: unknown }>(AUTH_ENDPOINTS.login, { method: 'POST', body: JSON.stringify({ username, password }) });
   if (typeof result?.access !== 'string' || typeof result?.refresh !== 'string') throw new ApiError('Phản hồi đăng nhập không hợp lệ.', undefined, undefined, 'malformed');

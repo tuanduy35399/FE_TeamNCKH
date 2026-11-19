@@ -31,9 +31,10 @@ export function LoginScreen({ navigation, route }: Props) {
     finally { setBusy(false); }
   }
   return <Screen scroll keyboard testID="login-screen"><View style={styles.hero}><View style={styles.mark}><Ionicons name="leaf-outline" size={42} color={colors.primary} /></View><Text style={styles.title}>MaiCare</Text><Text style={styles.subtitle}>Trợ lý chăm sóc mai vàng</Text></View>
-    <View style={styles.card}>{route.params?.registered && <Text style={styles.success}>Đăng ký thành công. Hãy đăng nhập để tiếp tục.</Text>}{notice && <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text>}
+    <View style={styles.card}>{route.params?.registered && <Text style={styles.success}>Đăng ký thành công. Hãy đăng nhập để tiếp tục.</Text>}{route.params?.passwordReset && <Text style={styles.success}>Đổi mật khẩu thành công. Hãy đăng nhập bằng mật khẩu mới.</Text>}{notice && <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text>}
       <AppInput label="Tên đăng nhập" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} returnKeyType="next" error={errors.username} testID="login-username" />
       <AppInput label="Mật khẩu" value={password} onChangeText={setPassword} password returnKeyType="done" onSubmitEditing={submit} error={errors.password} testID="login-password" />
+      <Pressable accessibilityRole="link" onPress={() => navigation.navigate('ForgotPassword')} style={styles.link}><Text style={styles.linkStrong}>Quên mật khẩu?</Text></Pressable>
       {!!serverError && <Text accessibilityRole="alert" style={styles.error}>{serverError}</Text>}
       <AppButton title="Đăng nhập" onPress={submit} loading={busy} testID="login-submit" />
       <Pressable accessibilityRole="link" onPress={() => navigation.navigate('Register')} style={styles.link}><Text style={styles.linkText}>Chưa có tài khoản? <Text style={styles.linkStrong}>Đăng ký</Text></Text></Pressable>

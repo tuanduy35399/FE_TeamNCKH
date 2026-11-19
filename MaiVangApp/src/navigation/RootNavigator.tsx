@@ -9,6 +9,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { LoadingState } from '../components/StateView';
 import { AccountScreen } from '../screens/account/AccountScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
+import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { ChatScreen } from '../screens/chat/ChatScreen';
 import { HistoryScreen } from '../screens/history/HistoryScreen';
@@ -29,6 +30,7 @@ const navTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: c
 function AuthNavigator() {
   return <AuthStack.Navigator screenOptions={{ headerShadowVisible: false, headerTintColor: colors.primaryDark, headerStyle: { backgroundColor: colors.background } }}>
     <AuthStack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+    <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Quên mật khẩu' }} />
     <AuthStack.Screen name="Register" component={RegisterScreen} options={{ title: 'Đăng ký' }} />
   </AuthStack.Navigator>;
 }

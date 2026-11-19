@@ -1,5 +1,7 @@
 export const AUTH_ENDPOINTS = {
   register: '/api/v1/user/register/',
+  passwordResetRequest: '/api/v1/user/password-reset/request/',
+  passwordResetConfirm: '/api/v1/user/password-reset/confirm/',
   login: '/api/v1/user/login/',
   refresh: '/api/v1/user/login/refresh/',
   me: '/api/v1/user/me/',
