@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ComponentRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { LoadingState } from '../components/StateView';
@@ -72,7 +72,7 @@ function AppTabs() {
   </Tabs.Navigator>;
 }
 function TutorialTabIcon({ routeName, color, size }: { routeName: keyof TabParamList; color: string; size: number }) {
-  const ref = useRef<View>(null); const { registerTarget } = useTutorial();
+  const ref = useRef<ComponentRef<typeof View>>(null); const { registerTarget } = useTutorial();
   const target = routeName === 'History' ? 'history' : routeName === 'Account' ? 'account' : undefined;
   useEffect(() => target ? registerTarget(target, { ref }) : undefined, [target, registerTarget]);
   return <View ref={ref} collapsable={false} testID={target ? `tutorial-target-${target}` : undefined}><Ionicons name={icons[routeName]} color={color} size={size} /></View>;

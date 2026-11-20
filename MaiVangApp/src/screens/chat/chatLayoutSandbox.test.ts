@@ -10,7 +10,7 @@ import { floatingFabBottom } from '../../navigation/mobileLayout';
  */
 
 const FAB_HEIGHT = 50;
-const FAB_WIDTH = 154;
+const FAB_WIDTH = 50;
 const DEFAULT_GAP = 12;
 const KEYBOARD_GAP = 8;
 const OLD_LIST_PADDING_BOTTOM = 14;

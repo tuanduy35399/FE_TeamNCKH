@@ -24,7 +24,7 @@ test('all seven spotlight targets are registered by name', () => {
   assert.equal(tutorialSteps.length, 7); tutorialSteps.forEach(step => assert.equal(registry.has(step.target), true)); cleanups.forEach(cleanup => cleanup());
 });
 
-test('diagnosis spotlight describes the final camera pill', () => {
+test('diagnosis spotlight describes the camera action', () => {
   const step = tutorialSteps.find(value => value.target === 'diagnosis');
   assert.equal(step?.title, 'Chẩn đoán bằng ảnh');
   assert.equal(step?.text, 'Nhấn nút camera để chụp lá bệnh hoặc chọn ảnh từ thư viện.');

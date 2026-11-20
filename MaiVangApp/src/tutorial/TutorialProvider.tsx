@@ -1,10 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren, type RefObject } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ComponentRef, type PropsWithChildren, type RefObject } from 'react';
 import { ActivityIndicator, Dimensions, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing } from '../theme';
 import { TutorialTargetRegistry, tutorialSteps, type TutorialTargetName } from './model';
 import { isTutorialCompleted, saveTutorialCompleted } from './storage';
 
-type Target = { ref: RefObject<View | null>; ensureVisible?: () => void };
+type Target = { ref: RefObject<ComponentRef<typeof View> | null>; ensureVisible?: () => void };
 type Rect = { x: number; y: number; width: number; height: number };
 type TutorialContextValue = { registerTarget: (name: TutorialTargetName, target: Target) => () => void; replay: () => void };
 const TutorialContext = createContext<TutorialContextValue | null>(null);
@@ -32,7 +32,7 @@ export function TutorialProvider({ children }: PropsWithChildren) {
     return () => clearTimeout(timer);
   }, [active, step, targetVersion]);
   useEffect(() => measure(), [measure]);
-  useEffect(() => { const subscription = Dimensions.addEventListener('change', ({ window }) => { setScreen(window); setTimeout(measure, 80); }); return () => subscription.remove(); }, [measure]);
+  useEffect(() => { const subscription = Dimensions.addEventListener('change', ({ window }: { window: ReturnType<typeof Dimensions.get> }) => { setScreen(window); setTimeout(measure, 80); }); return () => subscription.remove(); }, [measure]);
   const close = useCallback(async () => { await saveTutorialCompleted(); setActive(false); setRect(null); }, []);
   const value = useMemo<TutorialContextValue>(() => ({
     registerTarget: (name, target) => { const cleanup = targets.current.register(name, target); setTargetVersion(value => value + 1); return () => { cleanup(); setTargetVersion(value => value + 1); }; },

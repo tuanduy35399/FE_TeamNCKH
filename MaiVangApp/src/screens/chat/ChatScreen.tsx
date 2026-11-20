@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
 import {
   ActivityIndicator,
   BackHandler,
@@ -160,11 +160,25 @@ export function ChatScreen() {
   const retryCooldownTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sendLocked = useRef(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
-  const messageAreaRef = useRef<View>(null);
-  const composerRef = useRef<View>(null);
-  const sendRef = useRef<View>(null);
-  const diagnosisRef = useRef<View>(null);
-  const newChatRef = useRef<View>(null);
+  const followLatest = useRef(true);
+  const lastScrollOffset = useRef(0);
+  const scrollFrame = useRef<number | undefined>(undefined);
+  const scrollToLatest = useCallback(() => {
+    if (!followLatest.current || scrollFrame.current !== undefined) return;
+    scrollFrame.current = requestAnimationFrame(() => {
+      scrollFrame.current = undefined;
+      if (followLatest.current) {
+        // Use the ScrollView's actual content height. FlatList.scrollToEnd estimates
+        // the last row's position before variable-height answers/images are measured.
+        listRef.current?.getNativeScrollRef()?.scrollToEnd({ animated: false });
+      }
+    });
+  }, []);
+  const messageAreaRef = useRef<ComponentRef<typeof View>>(null);
+  const composerRef = useRef<ComponentRef<typeof View>>(null);
+  const sendRef = useRef<ComponentRef<typeof View>>(null);
+  const diagnosisRef = useRef<ComponentRef<typeof View>>(null);
+  const newChatRef = useRef<ComponentRef<typeof View>>(null);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(64);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
@@ -183,6 +197,9 @@ export function ChatScreen() {
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
     return () => { show.remove(); hide.remove(); };
   }, []);
+  useEffect(() => () => {
+    if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
+  }, []);
   useEffect(() => {
     if (!image || sending) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -193,6 +210,8 @@ export function ChatScreen() {
   }, [image, sending]);
   useEffect(() => () => { if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current); }, []);
   useEffect(() => {
+    followLatest.current = true;
+    lastScrollOffset.current = 0;
     releaseSubmissionLock(sendLocked);
     setSending(false);
     setUploadStage(undefined);
@@ -206,10 +225,8 @@ export function ChatScreen() {
     setPickerNeedsSettings(false);
   }, [conversationRevision]);
   useEffect(() => {
-    if (messages.length) {
-      listRef.current?.scrollToEnd({ animated: true });
-    }
-  }, [messages.length, bottomPanelHeight]);
+    scrollToLatest();
+  }, [messages, scrollToLatest]);
 
   function startRetryCooldown() {
     if (retryCooldownTimer.current) clearTimeout(retryCooldownTimer.current);
@@ -334,6 +351,8 @@ export function ChatScreen() {
     );
     const question = captured.submittedText;
     if ((!question && !selected) || !acquireSubmissionLock(sendLocked)) return;
+    followLatest.current = true;
+    scrollToLatest();
     const token = beginSessionGeneration();
     const optimistic: ChatMessage = {
       id: -Date.now(),
@@ -592,6 +611,7 @@ export function ChatScreen() {
             </View>
           ) : (
             <FlatList
+              testID="chat-messages"
               ref={listRef}
               data={messages}
               keyExtractor={(item) => String(item.id)}
@@ -600,15 +620,15 @@ export function ChatScreen() {
                 styles.list,
                 !messages.length && styles.emptyList,
               ]}
-              onLayout={() => {
-                if (messages.length) {
-                  listRef.current?.scrollToEnd({ animated: false });
-                }
-              }}
-              onContentSizeChange={() => {
-                if (messages.length) {
-                  listRef.current?.scrollToEnd({ animated: false });
-                }
+              onLayout={scrollToLatest}
+              onContentSizeChange={scrollToLatest}
+              scrollEventThrottle={16}
+              onScroll={({ nativeEvent: { contentOffset, contentSize, layoutMeasurement } }) => {
+                const offset = Math.max(0, contentOffset.y);
+                const atBottom = contentSize.height - layoutMeasurement.height - offset <= 48;
+                if (atBottom) followLatest.current = true;
+                else if (scrollFrame.current === undefined && offset < lastScrollOffset.current - 2) followLatest.current = false;
+                lastScrollOffset.current = offset;
               }}
               ListEmptyComponent={historyId ? <View testID="empty-history" style={styles.trueEmpty}><Ionicons name="chatbubble-outline" size={28} color={colors.muted} /><Text style={styles.muted}>Cuộc trò chuyện này chưa có tin nhắn.</Text></View> : <Welcome onSelect={setText} />}
               renderItem={({ item, index }) => (
