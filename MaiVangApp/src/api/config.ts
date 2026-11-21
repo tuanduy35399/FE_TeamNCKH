@@ -18,7 +18,7 @@ export function normalizeApiBaseUrl(value: string): string {
 }
 export function setRuntimeApiBaseUrl(value: string | null): void { runtimeApiBaseUrl = value ? normalizeApiBaseUrl(value) : ''; }
 export function getApiBaseUrl(): string {
-  if (!runtimeApiBaseUrl) throw new Error('MaiCare chưa được cấu hình máy chủ cục bộ.');
+  if (!runtimeApiBaseUrl) throw new Error('Thiếu hoặc sai cấu hình EXPO_PUBLIC_API_BASE_URL.');
   return runtimeApiBaseUrl;
 }
 export function getBuildApiBaseUrl(): string | null {

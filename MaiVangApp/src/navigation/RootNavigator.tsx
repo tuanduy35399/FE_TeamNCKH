@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, type ComponentRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
-import { LoadingState } from '../components/StateView';
+import { LoadingState, StateView } from '../components/StateView';
 import { AccountScreen } from '../screens/account/AccountScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
@@ -18,7 +18,6 @@ import type { AuthStackParamList, MainStackParamList, TabParamList } from './typ
 import { TutorialProvider, useTutorial } from '../tutorial/TutorialProvider';
 import { ChatSessionProvider } from '../chat/ChatSessionProvider';
 import { useBackendConfig } from '../api/BackendConfigProvider';
-import { BackendSetupScreen } from '../screens/auth/BackendSetupScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bottomSafePadding, tabBarHeight } from './mobileLayout';
 
@@ -84,7 +83,7 @@ export function RootNavigator() {
   const { status } = useAuth();
   const backend = useBackendConfig();
   if (!backend.ready) return <View style={styles.loading}><LoadingState label="Đang mở MaiCare..." /></View>;
-  if (!backend.baseUrl) return <BackendSetupScreen />;
+  if (!backend.baseUrl) return <View style={styles.loading}><StateView title="Ứng dụng chưa sẵn sàng" message="Vui lòng liên hệ bộ phận hỗ trợ để được trợ giúp." /></View>;
   if (status === 'restoring') return <View style={styles.loading}><LoadingState label="Đang mở MaiCare..." /></View>;
   return <NavigationContainer theme={navTheme} documentTitle={{ formatter: () => 'MaiCare – Trợ lý chăm sóc mai vàng' }}><StatusBar style="dark" />{status === 'authenticated' ? <MainNavigator /> : <AuthNavigator />}</NavigationContainer>;
 }

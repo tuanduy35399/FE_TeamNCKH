@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentRef } from "react";
 import {
   ActivityIndicator,
   BackHandler,
@@ -62,6 +62,8 @@ import type { ChatMessage, Detection, SelectedImage } from "../../types/domain";
 import { confidenceLabel, diseaseColor, diseaseLabel } from "../../utils/diseaseLabels";
 
 type UploadStage = "uploading" | "analyzing";
+const MIN_INPUT_HEIGHT = 24;
+const MAX_INPUT_HEIGHT = 132;
 
 function ProgressIndicator({ stage }: { stage?: ProgressStage }) {
   if (stage === "preparing") {
@@ -147,6 +149,21 @@ export function ChatScreen() {
     beginGeneration: beginSessionGeneration, isCurrentGeneration, invalidateHistory, conversationRevision,
   } = useChatSession();
   const [text, setText] = useState("");
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
+  const [inputWidth, setInputWidth] = useState(0);
+  useLayoutEffect(() => {
+    if (Platform.OS === "web" && inputRef.current) {
+      const input = inputRef.current as unknown as HTMLTextAreaElement;
+      // Reset before measuring so deleting text also shrinks the textarea.
+      input.style.height = "0px";
+      const height = Math.min(MAX_INPUT_HEIGHT, Math.max(MIN_INPUT_HEIGHT, input.scrollHeight));
+      input.style.height = `${height}px`;
+      setInputHeight(height);
+    } else if (!text) {
+      setInputHeight(MIN_INPUT_HEIGHT);
+    }
+  }, [text, inputWidth]);
   const [image, setImage] = useState<SelectedImage>();
   const [preparingImage, setPreparingImage] = useState(false);
   const [pickerError, setPickerError] = useState("");
@@ -711,8 +728,13 @@ export function ChatScreen() {
             style={styles.inputShell}
           >
             <TextInput
+              ref={inputRef}
               value={text}
               onChangeText={setText}
+              onLayout={event => setInputWidth(event.nativeEvent.layout.width)}
+              onContentSizeChange={Platform.OS === "web" ? undefined : event => {
+                setInputHeight(Math.min(MAX_INPUT_HEIGHT, Math.max(MIN_INPUT_HEIGHT, event.nativeEvent.contentSize.height)));
+              }}
               editable={!sending && !loading && !historyLoadError && !failed}
               placeholder={
                 image && !sending
@@ -721,9 +743,8 @@ export function ChatScreen() {
               }
               placeholderTextColor={colors.muted}
               multiline
-              numberOfLines={1}
               maxLength={4000}
-              style={[styles.input, !text && styles.inputSingleLine]}
+              style={[styles.input, { height: inputHeight }]}
             />
             <View
               ref={sendRef}
@@ -1194,7 +1215,7 @@ const styles = StyleSheet.create({
   },
   inputShell: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     gap: 8,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1212,19 +1233,16 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 22,
-    maxHeight: 100,
+    minHeight: MIN_INPUT_HEIGHT,
+    maxHeight: MAX_INPUT_HEIGHT,
     paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: 0,
-    margin: 0,
-    textAlignVertical: "center",
+    marginVertical: 5,
+    textAlignVertical: "top",
     color: colors.text,
     fontSize: 15,
     lineHeight: 22,
-  },
-  inputSingleLine: {
-    height: 24,
   },
   send: {
     width: 34,
