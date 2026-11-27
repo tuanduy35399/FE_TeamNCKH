@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState, type ComponentRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Animated, BackHandler, Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { floatingFabBottom } from '../navigation/mobileLayout';
 import { colors, radius, spacing } from '../theme';
+import { useTutorialTarget } from '../tutorial/TutorialProvider';
 
 const HEIGHT = 50;
 const CAMERA_BLUE = '#2563EB';
-export function FloatingCameraFab({ bottomReserved, keyboardVisible, targetRef, onCamera, onGallery }: { bottomReserved: number; keyboardVisible: boolean; targetRef: RefObject<ComponentRef<typeof View> | null>; onCamera: () => void; onGallery: () => void }) {
+export function FloatingCameraFab({ bottomReserved, keyboardVisible, onCamera, onGallery }: { bottomReserved: number; keyboardVisible: boolean; onCamera: () => void; onGallery: () => void }) {
+  const targetRef = useRef<ComponentRef<typeof View>>(null);
+  const targetLayout = useTutorialTarget('diagnosis', targetRef);
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [tips, setTips] = useState(false);
@@ -15,7 +18,11 @@ export function FloatingCameraFab({ bottomReserved, keyboardVisible, targetRef, 
   const pulse = useRef(new Animated.Value(1)).current;
   const pressed = useRef(new Animated.Value(1)).current;
   const resolvedBottom = floatingFabBottom(bottomReserved, keyboardVisible ? 8 : 12);
-  useEffect(() => { Animated.spring(bottom, { toValue: resolvedBottom, useNativeDriver: false, damping: 20, stiffness: 180 }).start(); }, [bottom, resolvedBottom]);
+  useEffect(() => {
+    const animation = Animated.spring(bottom, { toValue: resolvedBottom, useNativeDriver: false, damping: 20, stiffness: 180 });
+    animation.start(({ finished }) => { if (finished) targetLayout(); });
+    return () => animation.stop();
+  }, [bottom, resolvedBottom, targetLayout]);
   useEffect(() => {
     const animation = Animated.loop(Animated.sequence([
       Animated.timing(pulse, { toValue: 1.035, duration: 1100, useNativeDriver: true }),
@@ -34,14 +41,14 @@ export function FloatingCameraFab({ bottomReserved, keyboardVisible, targetRef, 
   }, [open, tips]);
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
     {open ? <Pressable accessibilityLabel="Đóng tùy chọn ảnh" onPress={() => setOpen(false)} style={StyleSheet.absoluteFill} /> : null}
-    <Animated.View ref={targetRef} collapsable={false} testID="tutorial-target-diagnosis" style={[styles.floating, { right: Math.max(12, insets.right + 12), bottom }]}>
+    <Animated.View onLayout={targetLayout} style={[styles.floating, { right: Math.max(12, insets.right + 12), bottom }]}>
       {open ? <View testID="camera-speed-dial" style={styles.actions}>
         <Quick testID="fab-tips-option" icon="information-circle-outline" label="Mẹo chụp ảnh rõ" onPress={() => { setOpen(false); setTips(true); }} />
         <Quick testID="fab-gallery-option" icon="images-outline" label="Chọn từ thư viện" onPress={() => { setOpen(false); onGallery(); }} />
         <Quick testID="fab-camera-option" icon="camera-outline" label="Chụp ảnh" onPress={() => { setOpen(false); onCamera(); }} />
       </View> : null}
       <Animated.View pointerEvents="none" style={[styles.glow, { transform: [{ scale: pulse }] }]} />
-      <Animated.View style={{ transform: [{ scale: pressed }] }}><Pressable testID="diagnosis-toggle" accessibilityRole="button" accessibilityLabel="Chẩn đoán ảnh" accessibilityState={{ expanded: open }} onPress={() => { Keyboard.dismiss(); setOpen(value => !value); }} onPressIn={() => Animated.spring(pressed, { toValue: .96, useNativeDriver: true }).start()} onPressOut={() => Animated.spring(pressed, { toValue: 1, useNativeDriver: true }).start()} style={styles.pill}><Ionicons name="camera" size={24} color="#fff" /></Pressable></Animated.View>
+      <Animated.View style={{ transform: [{ scale: pressed }] }}><Pressable ref={targetRef} collapsable={false} onLayout={targetLayout} testID="diagnosis-toggle" accessibilityRole="button" accessibilityLabel="Chẩn đoán ảnh" accessibilityState={{ expanded: open }} onPress={() => { Keyboard.dismiss(); setOpen(value => !value); }} onPressIn={() => Animated.spring(pressed, { toValue: .96, useNativeDriver: true }).start()} onPressOut={() => Animated.spring(pressed, { toValue: 1, useNativeDriver: true }).start()} style={styles.pill}><Ionicons name="camera" size={24} color="#fff" /></Pressable></Animated.View>
     </Animated.View>
     <Tips visible={tips} onClose={() => setTips(false)} />
   </View>;

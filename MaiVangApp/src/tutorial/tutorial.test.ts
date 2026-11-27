@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { LEGACY_TUTORIAL_STORAGE_KEY } from '../storage/keys';
 import { TutorialTargetRegistry, tutorialSteps } from './model';
 import { isTutorialCompletedWith as isTutorialCompleted, saveTutorialCompletedWith as saveTutorialCompleted, TUTORIAL_STORAGE_KEY, type TutorialStorage } from './storageCore';
 
@@ -28,4 +29,23 @@ test('diagnosis spotlight describes the camera action', () => {
   const step = tutorialSteps.find(value => value.target === 'diagnosis');
   assert.equal(step?.title, 'Chẩn đoán bằng ảnh');
   assert.equal(step?.text, 'Nhấn nút camera để chụp lá bệnh hoặc chọn ảnh từ thư viện.');
+});
+
+test('unmounting one conversation target keeps other mounted targets registered', () => {
+  const registry = new TutorialTargetRegistry<string>();
+  const removeWelcome = registry.register('messageArea', 'welcome');
+  const removeMessage = registry.register('messageArea', 'message');
+  assert.deepEqual(registry.getAll('messageArea'), ['welcome', 'message']);
+  removeWelcome();
+  assert.deepEqual(registry.getAll('messageArea'), ['message']);
+  removeMessage();
+  assert.equal(registry.has('messageArea'), false);
+});
+
+test('a legacy completion remains valid when its migration cannot be written', async () => {
+  const storage: TutorialStorage = {
+    getItem: key => key === LEGACY_TUTORIAL_STORAGE_KEY ? 'true' : null,
+    setItem: () => { throw new Error('Storage is read-only'); },
+  };
+  assert.equal(await isTutorialCompleted(storage), true);
 });

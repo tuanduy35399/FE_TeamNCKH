@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentRef, type PropsWithChildren, type RefObject } from "react";
 import {
   ActivityIndicator,
   BackHandler,
@@ -15,6 +16,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -55,7 +57,7 @@ import {
   normalizeImageForUpload,
 } from "../../images/normalizeImage";
 import { scaleContainedBoundingBox } from "../../images/imageGeometry";
-import { useTutorial } from "../../tutorial/TutorialProvider";
+import { useTutorial, useTutorialTarget } from "../../tutorial/TutorialProvider";
 import { colors, radius, spacing } from "../../theme";
 import { progressForEvent, type ProgressDisplay, type ProgressStage } from "../../chat/streamProgress";
 import type { ChatMessage, Detection, SelectedImage } from "../../types/domain";
@@ -141,7 +143,12 @@ function attachImageResult(
 
 export function ChatScreen() {
   const { account } = useAuth();
-  const { registerTarget } = useTutorial();
+  const { setChatReady, targetLayoutChanged } = useTutorial();
+  const isFocused = useIsFocused();
+  useLayoutEffect(() => {
+    setChatReady(isFocused);
+    return () => setChatReady(false);
+  }, [isFocused, setChatReady]);
   const {
     currentHistoryId: historyId, historyTitle, messages, loadingHistory: loading,
     historyLoadError, historyLoadTarget, setCurrentHistoryId: setHistoryId,
@@ -181,7 +188,7 @@ export function ChatScreen() {
   const lastScrollOffset = useRef(0);
   const scrollFrame = useRef<number | undefined>(undefined);
   const scrollToLatest = useCallback(() => {
-    if (!followLatest.current || scrollFrame.current !== undefined) return;
+    if (!messages.length || !followLatest.current || scrollFrame.current !== undefined) return;
     scrollFrame.current = requestAnimationFrame(() => {
       scrollFrame.current = undefined;
       if (followLatest.current) {
@@ -190,24 +197,16 @@ export function ChatScreen() {
         listRef.current?.getNativeScrollRef()?.scrollToEnd({ animated: false });
       }
     });
-  }, []);
+  }, [messages.length]);
   const messageAreaRef = useRef<ComponentRef<typeof View>>(null);
   const composerRef = useRef<ComponentRef<typeof View>>(null);
   const sendRef = useRef<ComponentRef<typeof View>>(null);
-  const diagnosisRef = useRef<ComponentRef<typeof View>>(null);
   const newChatRef = useRef<ComponentRef<typeof View>>(null);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(64);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  useEffect(() => {
-    const cleanups = [
-      registerTarget("messageArea", { ref: messageAreaRef }),
-      registerTarget("composer", { ref: composerRef }),
-      registerTarget("send", { ref: sendRef }),
-      registerTarget("diagnosis", { ref: diagnosisRef }),
-      registerTarget("newChat", { ref: newChatRef }),
-    ];
-    return () => cleanups.forEach((cleanup) => cleanup());
-  }, [registerTarget]);
+  const composerLayout = useTutorialTarget("composer", composerRef);
+  const sendLayout = useTutorialTarget("send", sendRef);
+  const newChatLayout = useTutorialTarget("newChat", newChatRef);
 
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -579,6 +578,7 @@ export function ChatScreen() {
           </View>
           <View
             ref={newChatRef}
+            onLayout={newChatLayout}
             testID="tutorial-target-newChat"
             collapsable={false}
           >
@@ -597,34 +597,38 @@ export function ChatScreen() {
         </View>
         <View
           ref={messageAreaRef}
-          testID="tutorial-target-messageArea"
+          onLayout={targetLayoutChanged}
           collapsable={false}
           style={styles.messageArea}
         >
           {loading ? (
             <View style={styles.center}>
-              <ActivityIndicator color={colors.primary} />
-              <Text style={styles.muted}>Đang tải cuộc trò chuyện...</Text>
+              <ConversationTarget clip={messageAreaRef} spaced>
+                <ActivityIndicator color={colors.primary} />
+                <Text style={styles.muted}>Đang tải cuộc trò chuyện...</Text>
+              </ConversationTarget>
             </View>
           ) : historyLoadError ? (
             <View style={styles.center}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={30}
-                color={colors.danger}
-              />
-              <Text accessibilityRole="alert" style={styles.loadError}>
-                {historyLoadError}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  historyLoadTarget && void openHistory(historyLoadTarget)
-                }
-                style={styles.loadRetry}
-              >
-                <Text style={styles.loadRetryText}>Thử lại</Text>
-              </Pressable>
+              <ConversationTarget clip={messageAreaRef} spaced>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={30}
+                  color={colors.danger}
+                />
+                <Text accessibilityRole="alert" style={styles.loadError}>
+                  {historyLoadError}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() =>
+                    historyLoadTarget && void openHistory(historyLoadTarget)
+                  }
+                  style={styles.loadRetry}
+                >
+                  <Text style={styles.loadRetryText}>Thử lại</Text>
+                </Pressable>
+              </ConversationTarget>
             </View>
           ) : (
             <FlatList
@@ -646,11 +650,20 @@ export function ChatScreen() {
                 if (atBottom) followLatest.current = true;
                 else if (scrollFrame.current === undefined && offset < lastScrollOffset.current - 2) followLatest.current = false;
                 lastScrollOffset.current = offset;
+                targetLayoutChanged();
               }}
-              ListEmptyComponent={historyId ? <View testID="empty-history" style={styles.trueEmpty}><Ionicons name="chatbubble-outline" size={28} color={colors.muted} /><Text style={styles.muted}>Cuộc trò chuyện này chưa có tin nhắn.</Text></View> : <Welcome onSelect={setText} />}
+              ListEmptyComponent={historyId ? (
+                <View testID="empty-history" style={styles.trueEmpty}>
+                  <ConversationTarget clip={messageAreaRef}>
+                    <Ionicons name="chatbubble-outline" size={28} color={colors.muted} />
+                    <Text style={styles.muted}>Cuộc trò chuyện này chưa có tin nhắn.</Text>
+                  </ConversationTarget>
+                </View>
+              ) : <Welcome onSelect={setText} clip={messageAreaRef} />}
               renderItem={({ item, index }) => (
                 <MessageBubble
                   busy={sending}
+                  clip={messageAreaRef}
                   message={item}
                   sourceQuestion={
                     item.sourceQuestion ||
@@ -723,6 +736,7 @@ export function ChatScreen() {
         <View style={styles.composer}>
           <View
             ref={composerRef}
+            onLayout={composerLayout}
             testID="tutorial-target-composer"
             collapsable={false}
             style={styles.inputShell}
@@ -748,6 +762,7 @@ export function ChatScreen() {
             />
             <View
               ref={sendRef}
+              onLayout={sendLayout}
               testID="tutorial-target-send"
               collapsable={false}
             >
@@ -776,7 +791,6 @@ export function ChatScreen() {
         {!image && !preparingImage && !loading ? <FloatingCameraFab
           bottomReserved={bottomPanelHeight}
           keyboardVisible={keyboardVisible}
-          targetRef={diagnosisRef}
           onCamera={() => void takePhoto()}
           onGallery={() => void chooseGallery()}
         /> : null}
@@ -785,16 +799,30 @@ export function ChatScreen() {
   );
 }
 
-function Welcome({ onSelect }: { onSelect: (value: string) => void }) {
+type ConversationClip = RefObject<ComponentRef<typeof View> | null>;
+
+function ConversationTarget({ children, clip, spaced }: PropsWithChildren<{ clip: ConversationClip; spaced?: boolean }>) {
+  const ref = useRef<ComponentRef<typeof View>>(null);
+  const onLayout = useTutorialTarget("messageArea", ref, clip);
+  return <View ref={ref} collapsable={false} testID="tutorial-target-messageArea" onLayout={onLayout} style={[styles.conversationTarget, spaced && styles.conversationState]}>{children}</View>;
+}
+
+function Welcome({ onSelect, clip }: { onSelect: (value: string) => void; clip: ConversationClip }) {
+  const { height } = useWindowDimensions();
+  const compact = height < 420;
   return (
-    <View style={styles.welcome}>
-      <View style={styles.leaf}>
-        <Ionicons name="leaf" size={29} color={colors.primary} />
+    <View style={[styles.welcome, compact && styles.compactWelcome]}>
+      <View style={[styles.welcomeIntro, compact && styles.compactIntro]}>
+        <View style={[styles.leaf, compact && styles.compactLeaf]}>
+          <Ionicons name="leaf" size={compact ? 22 : 29} color={colors.primary} />
+        </View>
+        <ConversationTarget clip={clip}>
+          <Text style={styles.welcomeTitle}>Trợ lý chăm sóc mai vàng</Text>
+          <Text style={styles.welcomeText}>
+            Hỏi về triệu chứng, chăm sóc hoặc dùng camera để chẩn đoán qua ảnh.
+          </Text>
+        </ConversationTarget>
       </View>
-      <Text style={styles.welcomeTitle}>Trợ lý chăm sóc mai vàng</Text>
-      <Text style={styles.welcomeText}>
-        Hỏi về triệu chứng, chăm sóc hoặc dùng camera để chẩn đoán qua ảnh.
-      </Text>
       <View style={styles.welcomeChips}>
         {welcomePrompts.map((item) => (
           <Pressable
@@ -811,15 +839,19 @@ function Welcome({ onSelect }: { onSelect: (value: string) => void }) {
 }
 function MessageBubble({
   busy,
+  clip,
   message,
   sourceQuestion,
   onSuggestion,
 }: {
   busy: boolean;
+  clip: ConversationClip;
   message: ChatMessage;
   sourceQuestion: string;
   onSuggestion: (prompt: string) => void;
 }) {
+  const target = useRef<ComponentRef<typeof View>>(null);
+  const onLayout = useTutorialTarget("messageArea", target, clip);
   const user = message.role === "user";
   const diagnosis =
     message.role === "assistant" && message.detections !== undefined;
@@ -840,7 +872,7 @@ function MessageBubble({
       style={[styles.messageRow, user && styles.userRow]}
     >
       {user && message.imageUri ? (
-        <View style={styles.imageMessage}>
+        <View ref={target} collapsable={false} testID="tutorial-target-messageArea" onLayout={onLayout} style={styles.imageMessage}>
           <DiagnosedImage message={message} />
           {!!message.content && message.content !== 'Đã gửi một ảnh để chẩn đoán.' && (
             <View style={[styles.bubble, styles.userBubble]}>
@@ -850,6 +882,10 @@ function MessageBubble({
         </View>
       ) : (
       <View
+        ref={target}
+        collapsable={false}
+        testID="tutorial-target-messageArea"
+        onLayout={onLayout}
         style={[
           styles.bubble,
           user ? styles.userBubble : styles.assistantBubble,
@@ -1055,6 +1091,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 24,
   },
+  compactWelcome: { paddingVertical: 8 },
+  welcomeIntro: { alignItems: "center", width: "100%" },
+  compactIntro: { flexDirection: "row", justifyContent: "center", gap: 8 },
+  compactLeaf: { width: 38, height: 38, marginBottom: 0 },
   leaf: {
     width: 58,
     height: 58,
@@ -1064,7 +1104,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
     marginBottom: 12,
   },
-  welcomeTitle: { color: colors.primaryDark, fontSize: 21, fontWeight: "900" },
+  conversationState: { gap: 10 },
+  conversationTarget: { alignItems: "center", flexShrink: 1, maxWidth: "100%" },
+  welcomeTitle: { color: colors.primaryDark, fontSize: 21, fontWeight: "900", textAlign: "center" },
   welcomeText: {
     color: colors.muted,
     textAlign: "center",

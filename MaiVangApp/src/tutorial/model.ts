@@ -14,8 +14,18 @@ export const tutorialSteps: Array<{ target: TutorialTargetName; title: string; t
 ];
 
 export class TutorialTargetRegistry<T> {
-  private values = new Map<TutorialTargetName, T>();
-  register(name: TutorialTargetName, target: T) { this.values.set(name, target); return () => { if (this.values.get(name) === target) this.values.delete(name); }; }
-  get(name: TutorialTargetName) { return this.values.get(name); }
+  private values = new Map<TutorialTargetName, Set<T>>();
+
+  register(name: TutorialTargetName, target: T) {
+    const registered = this.values.get(name) ?? new Set<T>();
+    this.values.set(name, registered);
+    registered.add(target);
+    return () => {
+      registered.delete(target);
+      if (!registered.size && this.values.get(name) === registered) this.values.delete(name);
+    };
+  }
+
+  getAll(name: TutorialTargetName) { return [...(this.values.get(name) ?? [])]; }
   has(name: TutorialTargetName) { return this.values.has(name); }
 }

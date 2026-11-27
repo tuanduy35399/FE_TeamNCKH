@@ -6,7 +6,7 @@ export async function isTutorialCompletedWith(storage: TutorialStorage): Promise
     const current = await storage.getItem(TUTORIAL_STORAGE_KEY);
     if (current === 'true') return true;
     const legacy = await storage.getItem(LEGACY_TUTORIAL_STORAGE_KEY);
-    if (legacy === 'true') await storage.setItem(TUTORIAL_STORAGE_KEY, 'true');
+    if (legacy === 'true') await saveTutorialCompletedWith(storage);
     return legacy === 'true';
   } catch { return false; }
 }

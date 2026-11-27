@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { PlatformPressable } from '@react-navigation/elements';
+import { createBottomTabNavigator, type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, type ComponentRef } from 'react';
+import { useRef, type ComponentRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { LoadingState, StateView } from '../components/StateView';
@@ -15,7 +16,7 @@ import { ChatScreen } from '../screens/chat/ChatScreen';
 import { HistoryScreen } from '../screens/history/HistoryScreen';
 import { colors, fonts } from '../theme';
 import type { AuthStackParamList, MainStackParamList, TabParamList } from './types';
-import { TutorialProvider, useTutorial } from '../tutorial/TutorialProvider';
+import { TutorialProvider, useTutorialTarget } from '../tutorial/TutorialProvider';
 import { ChatSessionProvider } from '../chat/ChatSessionProvider';
 import { useBackendConfig } from '../api/BackendConfigProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,18 +64,18 @@ function AppTabs() {
     },
     tabBarHideOnKeyboard: true,
     tabBarLabelStyle: { fontSize: 11, fontFamily: fonts.medium, marginTop: 2 },
-    tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <TutorialTabIcon routeName={route.name} color={color} size={Math.min(size, 22)} />,
+    tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <Ionicons name={icons[route.name]} color={color} size={Math.min(size, 22)} />,
+    tabBarButton: route.name === 'Chat' ? undefined : props => <TutorialTabButton {...props} target={route.name === 'History' ? 'history' : 'account'} />,
   })}>
     <Tabs.Screen name="Chat" component={ChatScreen} />
     <Tabs.Screen name="History" component={HistoryScreen} />
     <Tabs.Screen name="Account" component={AccountScreen} />
   </Tabs.Navigator>;
 }
-function TutorialTabIcon({ routeName, color, size }: { routeName: keyof TabParamList; color: string; size: number }) {
-  const ref = useRef<ComponentRef<typeof View>>(null); const { registerTarget } = useTutorial();
-  const target = routeName === 'History' ? 'history' : routeName === 'Account' ? 'account' : undefined;
-  useEffect(() => target ? registerTarget(target, { ref }) : undefined, [target, registerTarget]);
-  return <View ref={ref} collapsable={false} testID={target ? `tutorial-target-${target}` : undefined}><Ionicons name={icons[routeName]} color={color} size={size} /></View>;
+function TutorialTabButton({ target, ...props }: BottomTabBarButtonProps & { target: 'history' | 'account' }) {
+  const ref = useRef<ComponentRef<typeof View>>(null);
+  const onLayout = useTutorialTarget(target, ref);
+  return <PlatformPressable {...props} ref={ref} collapsable={false} onLayout={onLayout} testID={`tutorial-target-${target}`} />;
 }
 function MainNavigator() {
   return <TutorialProvider><ChatSessionProvider><MainStack.Navigator><MainStack.Screen name="Tabs" component={AppTabs} options={{ headerShown: false }} /></MainStack.Navigator></ChatSessionProvider></TutorialProvider>;

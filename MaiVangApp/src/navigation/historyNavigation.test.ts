@@ -20,6 +20,7 @@ test('bottom History navigation and its tutorial target remain visible', () => {
   assert.match(source, /History: 'Lịch sử'/);
   assert.match(source, /Account: 'Tài khoản'/);
   assert.match(source, /<Tabs\.Screen name="History" component=\{HistoryScreen\}/);
-  assert.match(source, /routeName === 'History' \? 'history'/);
+  assert.match(source, /tabBarButton:[^\n]+TutorialTabButton[^\n]+route.name === 'History' \? 'history'/);
+  assert.match(source, /<PlatformPressable[^\n]+testID=/);
   assert.match(source, /tabBarHideOnKeyboard:\s*true/);
 });
