@@ -4,8 +4,8 @@ import { createBottomTabNavigator, type BottomTabBarButtonProps } from '@react-n
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, type ComponentRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useRef, useState, type ComponentRef } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { LoadingState, StateView } from '../components/StateView';
 import { AccountScreen } from '../screens/account/AccountScreen';
@@ -20,7 +20,7 @@ import { TutorialProvider, useTutorialTarget } from '../tutorial/TutorialProvide
 import { ChatSessionProvider } from '../chat/ChatSessionProvider';
 import { useBackendConfig } from '../api/BackendConfigProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { bottomSafePadding, tabBarHeight } from './mobileLayout';
+import { bottomTabLayout, TAB_BAR_ICON_HEIGHT, TAB_BAR_ITEM_PADDING, TAB_BAR_LABEL_GAP } from './mobileLayout';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<MainStackParamList>();
@@ -38,34 +38,37 @@ const icons: Record<keyof TabParamList, keyof typeof Ionicons.glyphMap> = { Chat
 const labels: Record<keyof TabParamList, string> = { Chat: 'Trò chuyện', History: 'Lịch sử', Account: 'Tài khoản' };
 function AppTabs() {
   const insets = useSafeAreaInsets();
-  const bottomMargin = Math.max(10, insets.bottom);
+  const [labelHeights, setLabelHeights] = useState<Partial<Record<keyof TabParamList, number>>>({});
+  const labelHeight = Math.max(0, ...Object.values(labelHeights));
+  const layout = bottomTabLayout(insets.bottom, labelHeight);
   return <Tabs.Navigator screenOptions={({ route }) => ({
-    headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted,
-    tabBarStyle: {
-      backgroundColor: colors.surface,
-      borderRadius: 30,
-      marginHorizontal: 16,
-      marginBottom: bottomMargin,
-      height: 64,
-      borderTopWidth: 0,
-      borderWidth: 1,
-      borderColor: colors.border,
-      shadowColor: '#143725',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.10,
-      shadowRadius: 10,
-      elevation: 6,
-    },
-    tabBarItemStyle: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingTop: 6,
-      paddingBottom: 6,
-    },
+    headerShown: false,
+    tabBarActiveTintColor: colors.primary,
+    tabBarInactiveTintColor: colors.muted,
     tabBarHideOnKeyboard: true,
-    tabBarLabelStyle: { fontSize: 11, fontFamily: fonts.medium, marginTop: 2 },
-    tabBarLabel: labels[route.name], tabBarIcon: ({ color, size }) => <Ionicons name={icons[route.name]} color={color} size={Math.min(size, 22)} />,
-    tabBarButton: route.name === 'Chat' ? undefined : props => <TutorialTabButton {...props} target={route.name === 'History' ? 'history' : 'account'} />,
+    tabBarLabelPosition: 'below-icon',
+    tabBarAccessibilityLabel: labels[route.name],
+    tabBarStyle: {
+      height: layout.height,
+      paddingBottom: layout.bottomPadding,
+      paddingHorizontal: 0,
+      marginLeft: 16 + insets.left,
+      marginRight: 16 + insets.right,
+      backgroundColor: 'transparent',
+      borderTopWidth: 0,
+      elevation: 0,
+    },
+    tabBarBackground: () => <View testID="bottom-tab-surface" pointerEvents="none" importantForAccessibility="no"
+      aria-hidden style={[styles.tabSurface, { bottom: layout.bottomPadding }]} />,
+    tabBarIconStyle: styles.tabIcon,
+    tabBarIcon: ({ color, size }) => <Ionicons name={icons[route.name]} color={color} size={Math.min(size, 22)} />,
+    tabBarLabel: ({ color }) => <View style={[styles.tabLabelSlot, { minHeight: labelHeight }]}>
+      <Text testID={`bottom-tab-label-${route.name}`} style={[styles.tabLabel, { color }]}
+        onLayout={({ nativeEvent: { layout: { height } } }) => {
+          setLabelHeights(previous => previous[route.name] === height ? previous : { ...previous, [route.name]: height });
+        }}>{labels[route.name]}</Text>
+    </View>,
+    tabBarButton: props => route.name === 'Chat' ? <PlatformPressable {...props} style={[props.style, styles.tabButton]} /> : <TutorialTabButton {...props} target={route.name === 'History' ? 'history' : 'account'} />,
   })}>
     <Tabs.Screen name="Chat" component={ChatScreen} />
     <Tabs.Screen name="History" component={HistoryScreen} />
@@ -75,7 +78,7 @@ function AppTabs() {
 function TutorialTabButton({ target, ...props }: BottomTabBarButtonProps & { target: 'history' | 'account' }) {
   const ref = useRef<ComponentRef<typeof View>>(null);
   const onLayout = useTutorialTarget(target, ref);
-  return <PlatformPressable {...props} ref={ref} collapsable={false} onLayout={onLayout} testID={`tutorial-target-${target}`} />;
+  return <PlatformPressable {...props} style={[props.style, styles.tabButton]} ref={ref} collapsable={false} onLayout={onLayout} testID={`tutorial-target-${target}`} />;
 }
 function MainNavigator() {
   return <TutorialProvider><ChatSessionProvider><MainStack.Navigator><MainStack.Screen name="Tabs" component={AppTabs} options={{ headerShown: false }} /></MainStack.Navigator></ChatSessionProvider></TutorialProvider>;
@@ -88,4 +91,18 @@ export function RootNavigator() {
   if (status === 'restoring') return <View style={styles.loading}><LoadingState label="Đang mở MaiCare..." /></View>;
   return <NavigationContainer theme={navTheme} documentTitle={{ formatter: () => 'MaiCare – Trợ lý chăm sóc mai vàng' }}><StatusBar style="dark" />{status === 'authenticated' ? <MainNavigator /> : <AuthNavigator />}</NavigationContainer>;
 }
-const styles = StyleSheet.create({ loading: { flex: 1, backgroundColor: colors.background } });
+const styles = StyleSheet.create({
+  loading: { flex: 1, backgroundColor: colors.background },
+  tabSurface: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    backgroundColor: colors.surface, borderRadius: 30, borderWidth: 1, borderColor: colors.border,
+    shadowColor: '#143725', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 6,
+  },
+  tabButton: { justifyContent: 'center', paddingVertical: TAB_BAR_ITEM_PADDING },
+  tabIcon: { height: TAB_BAR_ICON_HEIGHT, flexGrow: 0, flexShrink: 0 },
+  tabLabelSlot: { alignSelf: 'stretch', flexShrink: 0, marginTop: TAB_BAR_LABEL_GAP },
+  tabLabel: {
+    fontFamily: fonts.medium, fontSize: 12, textAlign: 'center', maxWidth: '100%',
+    flexShrink: 0,
+  },
+});

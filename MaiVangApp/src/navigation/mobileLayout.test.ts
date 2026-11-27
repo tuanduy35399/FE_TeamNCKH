@@ -1,11 +1,33 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bottomSafePadding, floatingFabBottom, tabBarHeight } from './mobileLayout';
+import { bottomTabLayout, floatingFabBottom, TAB_BAR_ICON_HEIGHT, TAB_BAR_ITEM_PADDING, TAB_BAR_LABEL_GAP, TAB_BAR_OUTSIDE_GAP } from './mobileLayout';
 
-test('bottom tab bar includes every representative Android safe-area inset', () => {
-  for (const inset of [0, 16, 24, 32, 48]) {
-    assert.ok(bottomSafePadding(inset) >= inset);
-    assert.ok(tabBarHeight(inset) - bottomSafePadding(inset) >= 58);
+test('the bar reserves each bottom inset exactly once without reducing its interactive height', () => {
+  for (const inset of [0, 8, 16, 20, 24, 32, 34, 48, 60]) {
+    const layout = bottomTabLayout(inset, 16);
+    assert.equal(layout.bottomPadding, inset + TAB_BAR_OUTSIDE_GAP);
+    assert.equal(layout.height - layout.contentHeight, layout.bottomPadding);
+    assert.equal(layout.contentHeight, 64);
+  }
+});
+
+test('measured font and wrapping heights grow the interactive area independently of insets', () => {
+  for (const scale of [1, 1.15, 1.3, 1.5, 2]) {
+    for (const lines of [1, 2, 3]) {
+      const label = lines * 16 * scale;
+      const needed = TAB_BAR_ICON_HEIGHT + 2 * TAB_BAR_ITEM_PADDING + TAB_BAR_LABEL_GAP + label;
+      const actual = bottomTabLayout(34, label);
+      assert.ok(actual.contentHeight >= needed);
+      assert.ok(actual.contentHeight >= 48);
+      assert.equal(actual.contentHeight, bottomTabLayout(0, label).contentHeight);
+    }
+  }
+  assert.equal(bottomTabLayout(34, 16).contentHeight < bottomTabLayout(34, 64).contentHeight, true);
+});
+
+test('invalid inset and measurement inputs do not produce negative or nonfinite dimensions', () => {
+  for (const value of [NaN, Infinity, -Infinity, -20]) {
+    assert.deepEqual(bottomTabLayout(value, value), bottomTabLayout(0, 0));
   }
 });
 
